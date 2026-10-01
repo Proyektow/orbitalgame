@@ -9,7 +9,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%23090b18'/><ellipse cx='50' cy='50' rx='40' ry='18' fill='none' stroke='%23343958' stroke-width='3' transform='rotate(-28 50 50)'/><circle cx='50' cy='50' r='9' fill='%23ffffff'/><circle cx='80' cy='34' r='7' fill='%236df7e8'/><circle cx='20' cy='66' r='5' fill='%23ff5b87'/></svg>">
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%23090b18'/><ellipse cx='50' cy='50' rx='40' ry='18' fill='none' stroke='%23343958' stroke-width='3' transform='rotate(-28 50 50)'/><circle cx='50' cy='50' r='9' fill='%23ffffff'/><circle cx='80' cy='34' r='7' fill='%236df7e8'/><circle cx='20' cy='66' r='5' fill='%23ff5b87'/></svg>">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=2.7.0">
+  <link rel="stylesheet" href="style.css?v=2.8.0">
 </head>
 <body>
   <main class="game-shell">
@@ -19,7 +19,10 @@
     <header class="topbar" id="game-topbar" aria-live="polite" hidden>
       <div class="score-wrap">
         <span class="eyebrow" id="score-label">PUNTOS</span>
-        <strong id="score">0</strong>
+        <div class="score-flex">
+          <strong id="score">0</strong>
+          <span id="multiplier-badge" class="multiplier-badge" hidden>x2</span>
+        </div>
       </div>
       <div class="meta-wrap">
         <span class="eyebrow">FOTONES</span>
@@ -33,7 +36,6 @@
         <span class="eyebrow">RÉCORD</span>
         <strong id="best">0</strong>
       </div>
-      <!-- Botón de Pausa integrado -->
       <button id="pause-btn" class="pause-trigger-btn" type="button" aria-label="Pausa">⏸</button>
       <div id="streak" class="streak" aria-label="Racha"></div>
     </header>
@@ -95,16 +97,15 @@
           <button type="button" class="opt-btn active" data-mode="classic">CLÁSICO</button>
           <button type="button" class="opt-btn" data-mode="evolution">EVOLUCIÓN</button>
           <button type="button" class="opt-btn" data-mode="constellation">CONSTELACIÓN</button>
-          <button type="button" class="opt-btn" data-mode="pulse">PULSO (DASH)</button>
         </div>
       </div>
 
       <div class="diff-selector" id="diff-container" hidden>
-        <span class="eyebrow">DIFICULTAD INICIAL</span>
+        <span class="eyebrow">DIFICULTAD Y RECOMPENSA</span>
         <div class="btn-group" id="diff-group">
-          <button type="button" class="opt-btn active" data-diff="easy">FÁCIL</button>
-          <button type="button" class="opt-btn" data-diff="normal">NORMAL</button>
-          <button type="button" class="opt-btn" data-diff="hard">EXTREMO</button>
+          <button type="button" class="opt-btn active" data-diff="easy">FÁCIL (1x)</button>
+          <button type="button" class="opt-btn" data-diff="normal">NORMAL (1.5x)</button>
+          <button type="button" class="opt-btn" data-diff="hard">EXTREMO (2x)</button>
         </div>
       </div>
 
@@ -126,7 +127,7 @@
       <small id="hint">TOCA EN CUALQUIER LUGAR PARA CAMBIAR DE ANILLO</small>
     </div>
 
-    <!-- Tienda -->
+    <!-- Tienda Expandida -->
     <section id="shop-modal" class="modal-box" hidden>
       <div class="modal-head">
         <div>
@@ -140,6 +141,9 @@
       <span class="eyebrow shop-category-title">DISEÑOS DE NAVE</span>
       <div class="shop-grid" id="skin-grid"></div>
 
+      <span class="eyebrow shop-category-title">ESTELAS / EFECTOS</span>
+      <div class="shop-grid" id="trail-grid"></div>
+
       <span class="eyebrow shop-category-title">TEMAS DE COLOR</span>
       <div class="shop-grid" id="theme-grid"></div>
     </section>
@@ -148,16 +152,16 @@
     <section id="update-modal" class="modal-box" hidden>
       <div class="modal-head">
         <div>
-          <span class="eyebrow" id="update-tag">VERSIÓN 2.7.0</span>
-          <h2>¡Novedades del Sistema!</h2>
+          <span class="eyebrow" id="update-tag">VERSIÓN 2.8.0</span>
+          <h2>¡Novedades del Hangar!</h2>
         </div>
       </div>
       <div class="update-body">
         <ul id="update-list">
-          <li><strong>Pausa y Salir:</strong> Ahora puedes detener la partida en cualquier momento o volver al menú.</li>
-          <li><strong>Modo Pulso Mejorado:</strong> Físicas reales tipo Geometry Dash, plataformas elevadas y orbes de salto.</li>
-          <li><strong>Bots de Constelación Inteligentes:</strong> Detección de colisiones predictiva, esquivas y tácticas de encierro.</li>
-          <li><strong>Movimiento Ultra Fluido:</strong> Interpolación suave de serpientes sin tirones en móviles.</li>
+          <li><strong>Multiplicador x2:</strong> Juega en modo Extremo para ganar el doble de puntos y fotones.</li>
+          <li><strong>Tienda Expandida:</strong> Nuevas naves cósmicas y efectos de estela para desbloquear.</li>
+          <li><strong>Interfaz Limpia:</strong> Se eliminan por completo los restos gráficos de partidas anteriores en el menú.</li>
+          <li><strong>Optimización Completa:</strong> Menú de pausa y controles más ágiles.</li>
         </ul>
       </div>
       <label class="modal-check">
@@ -182,7 +186,6 @@
         <button type="button" class="filter-btn" data-filter="classic">CLÁSICO</button>
         <button type="button" class="filter-btn" data-filter="evolution">EVOLUCIÓN</button>
         <button type="button" class="filter-btn" data-filter="constellation">CONSTELACIÓN</button>
-        <button type="button" class="filter-btn" data-filter="pulse">PULSO</button>
       </div>
 
       <div class="board-columns">
@@ -204,7 +207,7 @@
     <div id="reverse-banner" class="alert-banner">¡INVERSIÓN!</div>
   </main>
 
-  <script src="game.js?v=2.7.0"></script>
+  <script src="game.js?v=2.8.0"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
