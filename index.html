@@ -15,11 +15,15 @@
   <main class="game-shell">
     <canvas id="game" aria-label="Juego Órbita"></canvas>
     
-    <!-- Barra superior de juego: oculta en el menú principal -->
+    <!-- Barra superior de juego: solo activa en partida -->
     <header class="topbar" id="game-topbar" aria-live="polite" hidden>
       <div class="score-wrap">
         <span class="eyebrow" id="score-label">PUNTOS</span>
         <strong id="score">0</strong>
+      </div>
+      <div class="meta-wrap">
+        <span class="eyebrow">FOTONES</span>
+        <strong id="hud-photons" style="color:var(--yellow)">0 ✦</strong>
       </div>
       <div class="meta-wrap">
         <span class="eyebrow">TIEMPO</span>
@@ -52,32 +56,18 @@
     <div class="center-ui" id="overlay">
       <div class="brand-logo" aria-hidden="true">
         <svg viewBox="0 0 120 120" class="logo-svg">
-          <defs>
-            <filter id="glow-cyan" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="3.5" result="blur"/>
-              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-            <filter id="glow-pink" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="3.5" result="blur"/>
-              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-            <filter id="glow-core" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="4" result="blur"/>
-              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-          </defs>
           <ellipse cx="60" cy="60" rx="46" ry="21" class="logo-orbit sub-orbit" transform="rotate(38 60 60)"/>
           <circle cx="60" cy="60" r="14" class="logo-core-halo"/>
-          <circle cx="60" cy="60" r="7" class="logo-core-sphere" filter="url(#glow-core)"/>
+          <circle cx="60" cy="60" r="7" class="logo-core-sphere"/>
           <g class="rotating-group">
             <ellipse cx="60" cy="60" rx="48" ry="22" class="logo-orbit main-orbit" transform="rotate(-28 60 60)"/>
-            <circle cx="98" cy="40" r="6" class="sat-cyan" filter="url(#glow-cyan)"/>
-            <circle cx="22" cy="80" r="4.5" class="sat-pink" filter="url(#glow-pink)"/>
+            <circle cx="98" cy="40" r="6" class="sat-cyan"/>
+            <circle cx="22" cy="80" r="4.5" class="sat-pink"/>
           </g>
         </svg>
       </div>
 
-      <p class="eyebrow" id="eyebrow">SISTEMA ORBITAL</p>
+      <div class="wallet-badge" id="menu-photons">0 ✦ FOTONES</div>
       <h1 id="headline">Órbita</h1>
       <p id="subline">Elige modalidad y despega.</p>
 
@@ -87,6 +77,7 @@
           <button type="button" class="opt-btn active" data-mode="classic">CLÁSICO</button>
           <button type="button" class="opt-btn" data-mode="evolution">EVOLUCIÓN</button>
           <button type="button" class="opt-btn" data-mode="constellation">CONSTELACIÓN</button>
+          <button type="button" class="opt-btn" data-mode="pulse">PULSO (DASH)</button>
         </div>
       </div>
 
@@ -100,31 +91,56 @@
       </div>
 
       <div class="control-selector" id="control-container" hidden>
-        <span class="eyebrow">CONTROL MÓVIL (CONSTELACIÓN)</span>
+        <span class="eyebrow">CONTROL CONSTELACIÓN</span>
         <div class="btn-group" id="control-group">
           <button type="button" class="opt-btn active" data-control="follow">SEGUIR DEDO</button>
           <button type="button" class="opt-btn" data-control="joystick">JOYSTICK</button>
         </div>
       </div>
 
-      <button id="start" class="primary-btn" type="button">DESPEGAR <span>↗</span></button>
-      <button id="open-board" class="board-trigger" type="button">VER HISTORIAL</button>
+      <div class="menu-actions">
+        <button id="start" class="primary-btn" type="button">DESPEGAR <span>↗</span></button>
+        <div class="sub-actions">
+          <button id="open-board" class="board-trigger" type="button">HISTORIAL</button>
+          <button id="open-shop" class="board-trigger shop-trigger" type="button">TIENDA ✦</button>
+        </div>
+      </div>
       <small id="hint">ESPACIO O CLIC PARA JUGAR</small>
     </div>
+
+    <!-- Tienda de Skins y Paletas -->
+    <section id="shop-modal" class="modal-box" hidden>
+      <div class="modal-head">
+        <div>
+          <span class="eyebrow">HANGAR ORBITAL</span>
+          <h2>Tienda</h2>
+        </div>
+        <button id="close-shop" class="close-board" type="button" aria-label="Cerrar">×</button>
+      </div>
+      <div class="shop-wallet">SALDO DISPONIBLE: <strong id="shop-photons">0</strong> ✦</div>
+      
+      <span class="eyebrow shop-category-title">DISEÑOS DE NAVE</span>
+      <div class="shop-grid" id="skin-grid"></div>
+
+      <span class="eyebrow shop-category-title">TEMAS DE COLOR</span>
+      <div class="shop-grid" id="theme-grid"></div>
+    </section>
 
     <!-- Modal de Actualizaciones -->
     <section id="update-modal" class="modal-box" hidden>
       <div class="modal-head">
         <div>
-          <span class="eyebrow" id="update-tag">VERSIÓN 2.3.2</span>
-          <h2>¡Novedades!</h2>
+          <span class="eyebrow" id="update-tag">VERSIÓN 2.5.0</span>
+          <h2>¡Mega Actualización!</h2>
         </div>
       </div>
       <div class="update-body">
         <ul id="update-list">
-          <li><strong>Interfaz Limpia:</strong> La barra de juego sólo aparece durante la partida.</li>
-          <li><strong>Historial por Modo:</strong> Filtra tus récords por Clásico, Evolución o Constelación.</li>
-          <li><strong>Corrección de Temblor:</strong> Solucionado el bug que dejaba la pantalla vibrando tras chocar.</li>
+          <li><strong>Nuevo Modo Pulso (Dash):</strong> Salta obstáculos geométricos al compás de la música.</li>
+          <li><strong>Controles Táctiles Reparados:</strong> Respuesta inmediata en seguimiento de dedo y joystick.</li>
+          <li><strong>Música Rítmica Synthwave:</strong> Sintetizador dinámico en tiempo real que reacciona a la partida.</li>
+          <li><strong>Tienda y Economía:</strong> Acumula fotones y desbloquea aspectos y temas.</li>
+          <li><strong>Game Feel:</strong> Números flotantes de puntuación y feedback háptico.</li>
         </ul>
       </div>
       <label class="modal-check">
@@ -134,7 +150,7 @@
       <button id="close-update" class="primary-btn update-close-btn" type="button">ENTENDIDO</button>
     </section>
 
-    <!-- Historial de Intentos con Selector de Modo -->
+    <!-- Historial de Intentos -->
     <section id="board" class="board" aria-label="Tabla de intentos" hidden>
       <div class="board-head">
         <div>
@@ -144,12 +160,12 @@
         <button id="close-board" class="close-board" type="button" aria-label="Cerrar">×</button>
       </div>
 
-      <!-- Filtro de modos dentro del historial -->
       <div class="board-filter-group" id="board-filters">
         <button type="button" class="filter-btn active" data-filter="all">TODOS</button>
         <button type="button" class="filter-btn" data-filter="classic">CLÁSICO</button>
         <button type="button" class="filter-btn" data-filter="evolution">EVOLUCIÓN</button>
         <button type="button" class="filter-btn" data-filter="constellation">CONSTELACIÓN</button>
+        <button type="button" class="filter-btn" data-filter="pulse">PULSO</button>
       </div>
 
       <div class="board-columns">
