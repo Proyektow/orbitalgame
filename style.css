@@ -49,11 +49,11 @@ canvas {
 }
 
 /* ===================================================
-   LOGOTIPO ORBITAL (Bola central + 2 esferas)
+   LOGOTIPO ORBITAL
 =================================================== */
 .brand-logo {
-  width: 82px;
-  height: 82px;
+  width: 76px;
+  height: 76px;
   margin-bottom: 2px;
   position: relative;
   display: flex;
@@ -73,13 +73,8 @@ canvas {
   vector-effect: non-scaling-stroke;
 }
 
-.main-orbit {
-  stroke: rgba(109, 247, 232, 0.45);
-}
-
-.sub-orbit {
-  stroke: rgba(83, 88, 120, 0.4);
-}
+.main-orbit { stroke: rgba(109, 247, 232, 0.45); }
+.sub-orbit { stroke: rgba(83, 88, 120, 0.4); }
 
 .logo-core-halo {
   fill: #11142b;
@@ -92,15 +87,8 @@ canvas {
   filter: drop-shadow(0 0 8px #ffffff);
 }
 
-.sat-cyan {
-  fill: var(--cyan);
-  filter: drop-shadow(0 0 10px var(--cyan));
-}
-
-.sat-pink {
-  fill: var(--pink);
-  filter: drop-shadow(0 0 8px var(--pink));
-}
+.sat-cyan { fill: var(--cyan); filter: drop-shadow(0 0 10px var(--cyan)); }
+.sat-pink { fill: var(--pink); filter: drop-shadow(0 0 8px var(--pink)); }
 
 .rotating-group {
   transform-origin: 60px 60px;
@@ -108,16 +96,12 @@ canvas {
 }
 
 @keyframes logoFloat {
-  0% {
-    transform: rotate(0deg) scale(0.97);
-  }
-  100% {
-    transform: rotate(6deg) scale(1.03);
-  }
+  0% { transform: rotate(0deg) scale(0.97); }
+  100% { transform: rotate(6deg) scale(1.03); }
 }
 
 /* ===================================================
-   BARRA SUPERIOR (HUD)
+   TOPBAR
 =================================================== */
 .topbar {
   position: absolute;
@@ -154,9 +138,7 @@ canvas {
   color: #c8c9df;
 }
 
-.attempt-wrap {
-  text-align: right;
-}
+.attempt-wrap { text-align: right; }
 
 .eyebrow {
   font: 500 9px/1.5 'DM Mono', monospace;
@@ -213,6 +195,76 @@ canvas {
 #hud-slow { color: #fdd835; border-color: #fdd83577; }
 
 /* ===================================================
+   CONTROLES TÁCTILES MODO CONSTELACIÓN
+=================================================== */
+.const-controls {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.joystick-zone {
+  position: absolute;
+  bottom: max(30px, env(safe-area-inset-bottom));
+  left: 24px;
+  width: 120px;
+  height: 120px;
+  pointer-events: auto;
+}
+
+.joystick-base {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(22, 27, 56, 0.45);
+  border: 2px solid rgba(109, 247, 232, 0.35);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.joystick-knob {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 14px var(--cyan);
+  position: absolute;
+  pointer-events: none;
+  transition: transform 0.05s ease-out;
+}
+
+.boost-btn {
+  position: absolute;
+  bottom: max(35px, env(safe-area-inset-bottom));
+  right: 24px;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: rgba(255, 91, 135, 0.25);
+  border: 2px solid var(--pink);
+  color: var(--pink);
+  font: 700 11px 'DM Mono', monospace;
+  letter-spacing: 1.2px;
+  pointer-events: auto;
+  box-shadow: 0 0 20px rgba(255, 91, 135, 0.3);
+  cursor: pointer;
+  min-width: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.boost-btn:active, .boost-btn.active {
+  background: var(--pink);
+  color: #fff;
+  transform: scale(0.94);
+}
+
+/* ===================================================
    MENÚ CENTRAL
 =================================================== */
 .center-ui {
@@ -226,7 +278,7 @@ canvas {
   align-items: center;
   flex-direction: column;
   text-align: center;
-  padding: 16px 20px;
+  padding: 14px 20px;
   transition: opacity 0.25s ease, transform 0.25s ease;
   pointer-events: auto;
 }
@@ -239,7 +291,7 @@ canvas {
 
 .center-ui h1 {
   margin: 2px 0 0;
-  font-size: clamp(34px, 9vw, 52px);
+  font-size: clamp(32px, 8vw, 48px);
   line-height: 1;
   font-weight: 600;
   letter-spacing: -2px;
@@ -249,21 +301,21 @@ canvas {
   font-size: 13px;
   line-height: 1.5;
   color: #a6a9c3;
-  margin: 6px 0 14px;
+  margin: 4px 0 12px;
 }
 
-.mode-selector, .diff-selector {
+.mode-selector, .diff-selector, .control-selector {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: 5px;
+  margin-bottom: 8px;
   width: 100%;
-  max-width: 280px;
+  max-width: 290px;
 }
 
 .btn-group {
   display: flex;
-  gap: 6px;
+  gap: 5px;
 }
 
 .opt-btn {
@@ -271,8 +323,8 @@ canvas {
   background: #14172f;
   color: #8c90b3;
   border: 1px solid #2e3357;
-  padding: 8px 0;
-  font: 500 10px 'DM Mono', monospace;
+  padding: 8px 4px;
+  font: 500 9px 'DM Mono', monospace;
   border-radius: 4px;
   min-width: 0;
   box-shadow: none;
@@ -295,25 +347,24 @@ canvas {
   background: var(--cyan);
   border: 0;
   border-radius: 4px;
-  padding: 14px 28px;
-  min-width: 220px;
+  padding: 13px 26px;
+  min-width: 210px;
   box-shadow: 0 0 24px rgba(109, 247, 232, 0.25);
   cursor: pointer;
   transition: transform 0.1s ease;
+  margin-top: 4px;
 }
 
-.primary-btn:active {
-  transform: scale(0.96);
-}
+.primary-btn:active { transform: scale(0.96); }
 
 #hint {
-  margin-top: 14px;
+  margin-top: 12px;
   color: #6f7396;
   font: 9px/1.5 'DM Mono', monospace;
 }
 
 /* ===================================================
-   BARRA INFERIOR Y EFECTOS
+   BARRA INFERIOR Y ALERTAS
 =================================================== */
 .bottom-ui {
   position: absolute;
@@ -347,14 +398,8 @@ canvas {
   pointer-events: none !important;
 }
 
-.flash.hit {
-  animation: hit 0.35s ease-out;
-}
-
-@keyframes hit {
-  0% { opacity: 0.35; }
-  100% { opacity: 0; }
-}
+.flash.hit { animation: hit 0.35s ease-out; }
+@keyframes hit { 0% { opacity: 0.35; } 100% { opacity: 0; } }
 
 .alert-banner {
   position: absolute;
@@ -379,9 +424,9 @@ canvas {
 }
 
 .board-trigger {
-  margin-top: 10px;
+  margin-top: 8px;
   min-width: 0;
-  padding: 8px 12px;
+  padding: 7px 10px;
   background: transparent;
   color: #a9adc8;
   border: 1px solid #353a59;
@@ -390,7 +435,7 @@ canvas {
 }
 
 /* ===================================================
-   MODALES (HISTORIAL Y ACTUALIZACIONES)
+   MODALES
 =================================================== */
 .board, .modal-box {
   position: absolute;
@@ -409,19 +454,10 @@ canvas {
   box-shadow: 0 20px 80px rgba(0, 0, 0, 0.8);
 }
 
-.board[hidden], .modal-box[hidden] {
-  display: none;
-}
+.board[hidden], .modal-box[hidden] { display: none; }
 
-.modal-head {
-  margin-bottom: 14px;
-  text-align: left;
-}
-
-.modal-head h2 {
-  font-size: 24px;
-  margin: 4px 0 0;
-}
+.modal-head { margin-bottom: 14px; text-align: left; }
+.modal-head h2 { font-size: 24px; margin: 4px 0 0; }
 
 .update-body ul {
   list-style: none;
@@ -436,9 +472,7 @@ canvas {
   border-bottom: 1px solid #1c203a;
 }
 
-.update-body strong {
-  color: var(--cyan);
-}
+.update-body strong { color: var(--cyan); }
 
 .modal-check {
   display: flex;
@@ -456,10 +490,7 @@ canvas {
   height: 16px;
 }
 
-.update-close-btn {
-  width: 100%;
-  padding: 12px;
-}
+.update-close-btn { width: 100%; padding: 12px; }
 
 .board-head {
   display: flex;
@@ -468,10 +499,7 @@ canvas {
   margin-bottom: 16px;
 }
 
-.board-head h2 {
-  font-size: 24px;
-  margin: 4px 0 0;
-}
+.board-head h2 { font-size: 24px; margin: 4px 0 0; }
 
 .close-board {
   min-width: 32px;
@@ -499,38 +527,17 @@ canvas {
   border-bottom: 1px solid #292d48;
 }
 
-.board-columns span:nth-child(n+2), .run-row span:nth-child(n+2) {
-  text-align: right;
-}
-
-.run-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
+.board-columns span:nth-child(n+2), .run-row span:nth-child(n+2) { text-align: right; }
+.run-list { list-style: none; margin: 0; padding: 0; }
 .run-row {
   padding: 10px 6px;
   border-bottom: 1px solid #1c2035;
   font: 11px 'DM Mono', monospace;
 }
 
-.run-row small {
-  display: block;
-  color: #777c9b;
-  font-size: 9px;
-}
+.run-row small { display: block; color: #777c9b; font-size: 9px; }
+.empty-board { color: #999db6; text-align: center; font-size: 12px; padding: 20px 0; }
 
-.empty-board {
-  color: #999db6;
-  text-align: center;
-  font-size: 12px;
-  padding: 20px 0;
-}
-
-/* ===================================================
-   RESPONSIVE (ESCRITORIO / PANTALLA ANCHA)
-=================================================== */
 @media (min-width: 600px) {
   .game-shell {
     max-width: 440px;
