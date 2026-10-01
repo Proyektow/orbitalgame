@@ -1,10 +1,11 @@
-// CONTROL DE VERSIÓN: 2.3.1 (Arrastre fluido continuo y multitouch optimizado)
-const CURRENT_VERSION = '2.3.1';
+// CONTROL DE VERSIÓN: 2.3.2 (Corrección bug shake, HUD limpio y filtros en historial)
+const CURRENT_VERSION = '2.3.2';
 
 const canvas = document.querySelector('#game');
 const ctx = canvas.getContext('2d');
 const overlay = document.querySelector('#overlay');
 const startButton = document.querySelector('#start');
+const gameTopBar = document.querySelector('#game-topbar');
 const scoreEl = document.querySelector('#score');
 const scoreLabelEl = document.querySelector('#score-label');
 const bestEl = document.querySelector('#best');
@@ -12,7 +13,6 @@ const streakEl = document.querySelector('#streak');
 const levelEl = document.querySelector('#level');
 const statusEl = document.querySelector('#status');
 const timerEl = document.querySelector('#timer');
-const attemptEl = document.querySelector('#attempt');
 const boardEl = document.querySelector('#board');
 const runListEl = document.querySelector('#run-list');
 const emptyBoardEl = document.querySelector('#empty-board');
@@ -37,6 +37,7 @@ const hudSlow = document.querySelector('#hud-slow');
 let selectedMode = 'classic'; // 'classic' | 'evolution' | 'constellation'
 let selectedDiff = 'easy';
 let selectedControl = localStorage.getItem('orbita-control') || 'follow'; // 'follow' | 'joystick'
+let activeFilter = 'all'; // Filtro de historial: 'all' | 'classic' | 'evolution' | 'constellation'
 
 // Sincronizar UI de selector de control
 document.querySelectorAll('#control-group .opt-btn').forEach(btn => {
@@ -97,6 +98,17 @@ document.querySelectorAll('#control-group .opt-btn').forEach(btn => {
   });
 });
 
+// Pestañas de filtrado en el Historial
+document.querySelectorAll('#board-filters .filter-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('#board-filters .filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    renderBoard();
+  });
+});
+
 // Sintetizador de audio
 let audioCtx = null;
 function playSound(type) {
@@ -150,7 +162,7 @@ function vibrate(pattern) {
   if ('vibrate' in navigator) navigator.vibrate(pattern);
 }
 
-// Variables globales de juego
+// Variables globales de render y físicas
 let w = 0, h = 0, dpr = 1, cx = 0, cy = 0;
 let rings = [];
 let mode = 'ready'; 
@@ -167,9 +179,7 @@ let magnetTimer = 0;
 let slowTimer = 0;
 let objects = [], particles = [];
 
-// ==========================================
-// VARIABLES DE MODO CONSTELACIÓN
-// ==========================================
+// Modo Constelación
 const MAP_SIZE = 1800;
 let playerSnake = null;
 let bots = [];
@@ -179,7 +189,7 @@ let pointerTarget = { x: 0, y: 0 };
 let isDraggingFollow = false;
 let followPointerId = null;
 
-// Variables Joystick
+// Joystick
 let joyCenter = { x: 0, y: 0 };
 let joyActive = false;
 let joyPointerId = null;
@@ -195,7 +205,6 @@ try {
 } catch { runs = []; }
 
 bestEl.textContent = best;
-attemptEl.textContent = String(attemptCount + 1).padStart(2, '0');
 
 const stars = Array.from({ length: 60 }, () => ({
   x: Math.random(),
@@ -253,11 +262,17 @@ function formatTime(seconds) {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
 
+// Renderizado filtrado de tabla de puntuaciones
 function renderBoard() {
-  const sorted = [...runs].sort((a, b) => b.score - a.score || b.seconds - a.seconds).slice(0, 10);
+  let filtered = [...runs];
+  if (activeFilter !== 'all') {
+    filtered = filtered.filter(r => (r.mode || 'classic') === activeFilter);
+  }
+  const sorted = filtered.sort((a, b) => b.score - a.score || b.seconds - a.seconds).slice(0, 10);
+
   runListEl.innerHTML = sorted.map(run => `
     <li class="run-row">
-      <span>${(run.mode || 'CLÁSICO').toUpperCase()}<small>NIVEL ${String(run.level).padStart(2, '0')} · #${run.attempt}</small></span>
+      <span>${(run.mode || 'CLÁSICO').toUpperCase()}<small>${run.mode === 'constellation' ? 'LONGITUD' : 'NIVEL ' + String(run.level).padStart(2, '0')} · #${run.attempt}</small></span>
       <span>${run.score}</span>
       <span>${formatTime(run.seconds)}</span>
     </li>
@@ -287,14 +302,17 @@ function createSnake(x, y, color, isPlayer = false) {
 function begin() {
   attemptCount++;
   localStorage.setItem('orbita-attempts', attemptCount);
-  attemptEl.textContent = String(attemptCount).padStart(2, '0');
   
   mode = 'playing';
   score = 0;
   streak = 0;
   elapsed = 0;
+  shake = 0; // RESET TOTAL DEL TEMBLOR PARA EVITAR BUG DE SACUDIDA
   scoreEl.textContent = '0';
   timerEl.textContent = '00:00';
+  
+  // Mostrar HUD superior solo durante la partida
+  gameTopBar.hidden = false;
   boardEl.hidden = true;
   overlay.classList.add('hidden');
 
@@ -362,9 +380,10 @@ function begin() {
 function finish() {
   if (mode !== 'playing') return;
   mode = 'over';
-  shake = 18;
+  shake = 16;
   playSound('hit');
   vibrate([80, 50, 120]);
+  
   constControls.hidden = true;
   isDraggingFollow = false;
   joyActive = false;
@@ -376,8 +395,9 @@ function finish() {
   
   statusEl.textContent = 'SEÑAL PERDIDA';
   
+  // Guardar partida en historial con su modo
   runs.push({ attempt: attemptCount, score, seconds: Math.floor(elapsed), level, mode: selectedMode });
-  runs = runs.slice(-30);
+  runs = runs.slice(-40);
   localStorage.setItem('orbita-runs', JSON.stringify(runs));
   renderBoard();
 
@@ -387,6 +407,9 @@ function finish() {
     localStorage.setItem('orbita-best', best);
     bestEl.textContent = best;
   }
+
+  // Ocultar barra superior en el menú final
+  gameTopBar.hidden = true;
 
   document.querySelector('#eyebrow').textContent = record ? '¡NUEVO RÉCORD!' : 'FIN DEL VIAJE';
   document.querySelector('#headline').textContent = `${score} ${selectedMode === 'constellation' ? 'nodos' : 'luces'}`;
@@ -404,7 +427,7 @@ function switchLane() {
   }
 }
 
-// Botones y enlaces del menú
+// Botones de inicio y tabla
 startButton.addEventListener('click', (e) => {
   e.preventDefault();
   e.stopPropagation();
@@ -424,10 +447,7 @@ document.querySelector('#close-board').addEventListener('click', (e) => {
   boardEl.hidden = true;
 });
 
-// ========================================================
-// SISTEMA DE ARRASTRE CONTINUO MEJORADO (POINTER EVENTS)
-// ========================================================
-
+// Controles táctiles
 function updateFollowTarget(clientX, clientY) {
   if (!playerSnake) return;
   const screenDx = clientX - w / 2;
@@ -451,7 +471,6 @@ function updateJoystick(px, py) {
   }
 }
 
-// 1. Control del Joystick virtual (con captura de arrastre)
 joystickZone.addEventListener('pointerdown', (e) => {
   e.stopPropagation();
   joyActive = true;
@@ -480,7 +499,6 @@ const endJoystick = (e) => {
 joystickZone.addEventListener('pointerup', endJoystick);
 joystickZone.addEventListener('pointercancel', endJoystick);
 
-// 2. Control del Turbo
 const startBoost = (e) => {
   e.stopPropagation();
   isBoosting = true;
@@ -495,7 +513,6 @@ boostBtn.addEventListener('pointerdown', startBoost);
 boostBtn.addEventListener('pointerup', endBoost);
 boostBtn.addEventListener('pointercancel', endBoost);
 
-// 3. Arrastre de la pantalla (Seguimiento de dedo y cambio de carril)
 shell.addEventListener('pointerdown', (e) => {
   if (e.target.closest('button, #board, #update-modal, #overlay:not(.hidden), .const-controls')) return;
 
@@ -520,7 +537,6 @@ shell.addEventListener('pointermove', (e) => {
     if (isDraggingFollow && e.pointerId === followPointerId) {
       updateFollowTarget(e.clientX, e.clientY);
     } else if (e.pointerType === 'mouse') {
-      // Movimiento continuo con ratón en PC
       updateFollowTarget(e.clientX, e.clientY);
     }
   }
@@ -535,7 +551,6 @@ const endFollowDrag = (e) => {
 shell.addEventListener('pointerup', endFollowDrag);
 shell.addEventListener('pointercancel', endFollowDrag);
 
-// Teclado
 window.addEventListener('keydown', (e) => {
   if (['Space', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyS'].includes(e.code)) {
     e.preventDefault();
@@ -711,6 +726,9 @@ function update(dt) {
       p.y += p.vy * dt;
       p.life -= dt;
     }
+    // Desvanecer el temblor rápidamente cuando no se está jugando
+    shake *= 0.85;
+    if (shake < 0.1) shake = 0;
     return;
   }
 
@@ -906,7 +924,9 @@ function update(dt) {
   }
   for (const t of trail) t.alpha -= dt * 2.2;
   trail = trail.filter(t => t.alpha > 0);
+
   shake *= 0.88;
+  if (shake < 0.1) shake = 0;
 }
 
 function draw(time) {
@@ -914,7 +934,7 @@ function draw(time) {
   ctx.clearRect(0, 0, w, h);
 
   ctx.save();
-  if (shake > 0.2) {
+  if (shake > 0.1) {
     ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
   }
 
