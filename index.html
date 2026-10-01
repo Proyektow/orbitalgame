@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#090b18">
+  <title>Órbita</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="game-shell">
+    <canvas id="game" aria-label="Juego Órbita"></canvas>
+    
+    <header class="topbar" aria-live="polite">
+      <div class="score-wrap">
+        <span class="eyebrow">PUNTOS</span>
+        <strong id="score">0</strong>
+      </div>
+      <div class="meta-wrap">
+        <span class="eyebrow">TIEMPO</span>
+        <strong id="timer">00:00</strong>
+      </div>
+      <div class="meta-wrap">
+        <span class="eyebrow">RÉCORD</span>
+        <strong id="best">0</strong>
+      </div>
+      <div class="meta-wrap attempt-wrap">
+        <span class="eyebrow">INTENTO</span>
+        <strong id="attempt">01</strong>
+      </div>
+      <div id="streak" class="streak" aria-label="Racha"></div>
+    </header>
+
+    <div class="center-ui" id="overlay">
+      <div class="orbit-mark" aria-hidden="true"><i></i><b></b></div>
+      <p class="eyebrow" id="eyebrow">UN JUEGO DE REFLEJOS</p>
+      <h1 id="headline">Órbita</h1>
+      <p id="subline">Salta entre anillos.<br>Recoge luz. Esquiva las anomalías.</p>
+      <button id="start" type="button">EMPEZAR <span>↗</span></button>
+      <button id="open-board" class="board-trigger" type="button">VER TABLA DE INTENTOS</button>
+      <small id="hint">TOCA EN CUALQUIER LUGAR O USA ESPACIO PARA CAMBIAR DE ANILLO</small>
+    </div>
+
+    <section id="board" class="board" aria-label="Tabla de intentos" hidden>
+      <div class="board-head">
+        <div>
+          <span class="eyebrow">TU HISTORIAL</span>
+          <h2>Intentos</h2>
+        </div>
+        <button id="close-board" class="close-board" type="button" aria-label="Cerrar">×</button>
+      </div>
+      <div class="board-columns">
+        <span># / NIVEL</span>
+        <span>PUNTOS</span>
+        <span>TIEMPO</span>
+      </div>
+      <ol id="run-list" class="run-list"></ol>
+      <p id="empty-board" class="empty-board">Aún no hay intentos registrados.</p>
+    </section>
+
+    <footer class="bottom-ui">
+      <span id="level">NIVEL 01</span>
+      <span class="sound-dot"></span>
+      <span id="status">LISTA PARA DESPEGAR</span>
+    </footer>
+
+    <div id="flash" class="flash"></div>
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>
