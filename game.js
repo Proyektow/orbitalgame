@@ -1,5 +1,5 @@
-// CONTROL DE VERSIÓN: 2.5.0
-const CURRENT_VERSION = '2.5.0';
+// CONTROL DE VERSIÓN: 2.6.0 (Restauración visual fiel y corrección del crash en muerte)
+const CURRENT_VERSION = '2.6.0';
 
 const canvas = document.querySelector('#game');
 const ctx = canvas.getContext('2d');
@@ -32,7 +32,7 @@ const joystickZone = document.querySelector('#joystick-zone');
 const joystickKnob = document.querySelector('#joystick-knob');
 const boostBtn = document.querySelector('#boost-btn');
 
-// Tienda y Modal
+// Tienda
 const shopModal = document.querySelector('#shop-modal');
 const openShopBtn = document.querySelector('#open-shop');
 const closeShopBtn = document.querySelector('#close-shop');
@@ -45,12 +45,12 @@ const hudMagnet = document.querySelector('#hud-magnet');
 const hudSlow = document.querySelector('#hud-slow');
 
 // ==========================================
-// SISTEMA DE AUDIO PROCEDURAL (SYNTHWAVE)
+// AUDIO SYNTHWAVE PROCEDURAL
 // ==========================================
 let audioCtx = null;
 let musicInterval = null;
 let bassStep = 0;
-const bassNotes = [110, 110, 130.81, 146.83, 164.81, 146.83, 130.81, 98]; // A2 escala pentatónica
+const bassNotes = [110, 110, 130.81, 146.83, 164.81, 146.83, 130.81, 98];
 
 function initAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -60,8 +60,7 @@ function initAudio() {
 function startMusic() {
   stopMusic();
   bassStep = 0;
-  const bpm = 125;
-  const stepTime = (60 / bpm) / 2 * 1000; // semicorcheas
+  const stepTime = (60 / 125) / 2 * 1000;
   musicInterval = setInterval(() => {
     if (mode === 'playing') playBassTone();
   }, stepTime);
@@ -83,8 +82,7 @@ function playBassTone() {
     const filter = audioCtx.createBiquadFilter();
 
     osc.type = 'sawtooth';
-    const freq = bassNotes[bassStep % bassNotes.length];
-    osc.frequency.setValueAtTime(freq, now);
+    osc.frequency.setValueAtTime(bassNotes[bassStep % bassNotes.length], now);
 
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(450, now);
@@ -247,9 +245,9 @@ openShopBtn.addEventListener('click', (e) => { e.stopPropagation(); renderShop()
 closeShopBtn.addEventListener('click', (e) => { e.stopPropagation(); shopModal.hidden = true; });
 
 // ==========================================
-// VARIABLES DE JUEGO GENERALES
+// VARIABLES DE PARTIDA Y RENDER
 // ==========================================
-let selectedMode = 'classic'; // 'classic' | 'evolution' | 'constellation' | 'pulse'
+let selectedMode = 'classic';
 let selectedDiff = 'easy';
 let selectedControl = localStorage.getItem('orbita-control') || 'follow';
 let activeFilter = 'all';
@@ -281,9 +279,7 @@ let joyActive = false;
 let joyCenter = { x: 0, y: 0 };
 let joyPointerId = null;
 
-// ==========================================
-// MODO PULSO (GEOMETRY DASH HORIZONTAL)
-// ==========================================
+// Modo Pulso
 let pulseY = 0;
 let pulseVy = 0;
 let pulseGravity = 1200;
@@ -301,8 +297,12 @@ try { runs = JSON.parse(localStorage.getItem('orbita-runs') || '[]'); } catch { 
 bestEl.textContent = best;
 updateWalletUI();
 
-const stars = Array.from({ length: 60 }, () => ({
-  x: Math.random(), y: Math.random(), r: Math.random() * 1.3 + 0.3, a: Math.random() * 0.4 + 0.1, phase: Math.random() * Math.PI * 2
+const stars = Array.from({ length: 65 }, () => ({
+  x: Math.random(),
+  y: Math.random(),
+  r: Math.random() * 1.3 + 0.3,
+  a: Math.random() * 0.45 + 0.15,
+  phase: Math.random() * Math.PI * 2
 }));
 
 function resize() {
@@ -314,16 +314,15 @@ function resize() {
   cx = w / 2;
   cy = h * 0.51;
 
-  const baseOuter = Math.min(w, h) * 0.35;
+  const baseOuter = Math.min(w, h) * 0.34;
   if (selectedMode === 'evolution' && level >= 3) {
     rings = [baseOuter, baseOuter * 0.73, baseOuter * 0.48];
   } else {
-    rings = [baseOuter, baseOuter * 0.65];
+    rings = [baseOuter, baseOuter * 0.67];
   }
 
   if (currentRadius === 0) currentRadius = rings[0];
 
-  // Configuración de límites modo Pulso
   pulseFloor = h * 0.76;
   pulseCeil = h * 0.24;
 }
@@ -332,6 +331,28 @@ resize();
 
 function spawnFloatText(text, x, y, color = '#6df7e8') {
   floatTexts.push({ text, x, y, vy: -35, alpha: 1, color });
+}
+
+function setStreak() {
+  streakEl.innerHTML = Array.from({ length: 5 }, (_, i) => 
+    `<span class="${i < streak % 5 ? 'on' : ''}"></span>`
+  ).join('');
+}
+setStreak();
+
+function getGeometryType() {
+  if (selectedMode === 'classic') return 'circle';
+  if (selectedDiff === 'hard' || level >= 6) return 'octagon';
+  if (selectedDiff === 'normal' || level >= 4) return 'hexagon';
+  if (level >= 2) return 'ellipse';
+  return 'circle';
+}
+
+function getRadiusModifier(theta, shape) {
+  if (shape === 'ellipse') return 1 + 0.18 * Math.cos(2 * theta);
+  if (shape === 'hexagon') return 1 + 0.08 * Math.cos(6 * theta);
+  if (shape === 'octagon') return 1 + 0.1 * Math.cos(8 * theta);
+  return 1;
 }
 
 // Selectores UI
@@ -462,7 +483,6 @@ function begin() {
     spawnClock = 1;
 
   } else {
-    // Clásico y Evolución
     scoreLabelEl.textContent = 'PUNTOS';
     streakEl.style.display = 'flex';
     constControls.hidden = true;
@@ -483,6 +503,7 @@ function begin() {
     trail = [];
     resize();
     currentRadius = rings[0];
+    setStreak();
     levelEl.textContent = 'NIVEL ' + String(level).padStart(2, '0');
     statusEl.textContent = 'SISTEMA ACTIVO';
   }
@@ -510,32 +531,31 @@ function finish() {
   localStorage.setItem('orbita-runs', JSON.stringify(runs));
   renderBoard();
 
-  if (score > best) {
+  const record = score > best;
+  if (record) {
     best = score;
     localStorage.setItem('orbita-best', best);
     bestEl.textContent = best;
   }
 
   gameTopBar.hidden = true;
-  document.querySelector('#eyebrow').textContent = 'FIN DEL VIAJE';
-  document.querySelector('#headline').textContent = `${score} pts`;
-  document.querySelector('#subline').innerHTML = `Modo ${selectedMode.toUpperCase()} · +${Math.floor(score / 5)} Fotones ganados`;
-  startButton.innerHTML = 'REINTENTAR <span>↗</span>';
+  document.querySelector('#eyebrow').textContent = record ? '¡NUEVO RÉCORD!' : 'FIN DEL VIAJE';
+  document.querySelector('#headline').textContent = score > 0 ? `${score} luz${score === 1 ? '' : 'es'}` : 'Casi.';
+  document.querySelector('#subline').innerHTML = `Modo ${selectedMode.toUpperCase()} · Tiempo ${formatTime(elapsed)}<br>+${Math.floor(score / 4)} Fotones recolectados`;
+  startButton.innerHTML = 'OTRA VUELTA <span>↗</span>';
+  document.querySelector('#hint').textContent = 'TOCA PARA VOLVER A LA ÓRBITA';
   updateWalletUI();
   overlay.classList.remove('hidden');
 }
 
 // ========================================================
-// CONTROLES TÁCTILES Y JOYSTICK MATEMÁTICAMENTE CORREGIDOS
+// CONTROLES Y JOYSTICK
 // ========================================================
-
 function handleTouchDirection(clientX, clientY) {
   if (!playerSnake || mode !== 'playing') return;
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width / (rect.width * dpr);
   const scaleY = canvas.height / (rect.height * dpr);
-
-  // Posición relativa al centro de la pantalla (donde está centrado el jugador)
   const touchCenterX = (clientX - rect.left) * scaleX - (w / 2);
   const touchCenterY = (clientY - rect.top) * scaleY - (h / 2);
 
@@ -544,7 +564,6 @@ function handleTouchDirection(clientX, clientY) {
   }
 }
 
-// Joystick corregido
 joystickZone.addEventListener('pointerdown', (e) => {
   e.stopPropagation();
   joyActive = true;
@@ -582,13 +601,11 @@ const endJoy = () => {
 joystickZone.addEventListener('pointerup', endJoy);
 joystickZone.addEventListener('pointercancel', endJoy);
 
-// Turbo
 boostBtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); isBoosting = true; boostBtn.classList.add('active'); });
 const endBoost = () => { isBoosting = false; boostBtn.classList.remove('active'); };
 boostBtn.addEventListener('pointerup', endBoost);
 boostBtn.addEventListener('pointercancel', endBoost);
 
-// Pantalla principal para interactuar
 shell.addEventListener('pointerdown', (e) => {
   if (e.target.closest('button, #board, #shop-modal, #update-modal, #overlay:not(.hidden), .const-controls')) return;
 
@@ -596,15 +613,13 @@ shell.addEventListener('pointerdown', (e) => {
     if (selectedMode === 'constellation') {
       if (selectedControl === 'follow') handleTouchDirection(e.clientX, e.clientY);
     } else if (selectedMode === 'pulse') {
-      // Salto en modo Pulso
       if (Math.abs(pulseY - (pulseFloor - 12)) < 4 || Math.abs(pulseY - (pulseCeil + 12)) < 4) {
         pulseVy = pulseGravity > 0 ? -480 : 480;
         playSound('jump');
         vibrate(20);
       }
     } else {
-      // Cambio de carril en clásicos
-      targetLane = (targetLane + 1) % rings.length;
+      targetLane = 1 - targetLane;
       playSound('switch');
       vibrate(25);
     }
@@ -619,7 +634,6 @@ shell.addEventListener('pointermove', (e) => {
   }
 });
 
-// Teclado
 window.addEventListener('keydown', (e) => {
   if (['Space', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyS'].includes(e.code)) {
     e.preventDefault();
@@ -632,7 +646,7 @@ window.addEventListener('keydown', (e) => {
           playSound('jump');
         }
       } else {
-        targetLane = (targetLane + 1) % rings.length;
+        targetLane = 1 - targetLane;
         playSound('switch');
       }
     } else if (mode === 'over') {
@@ -649,6 +663,26 @@ document.querySelector('#close-board').addEventListener('click', (e) => { e.stop
 // ==========================================
 // BUCLES DE ACTUALIZACIÓN (UPDATE)
 // ==========================================
+function burst(x, y, color, count = 12) {
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const speed = 40 + Math.random() * 120;
+    particles.push({
+      x, y,
+      vx: Math.cos(a) * speed,
+      vy: Math.sin(a) * speed,
+      life: 0.35 + Math.random() * 0.4,
+      max: 0.75,
+      color,
+      size: 1.2 + Math.random() * 2.5
+    });
+  }
+}
+
+function norm(a) {
+  return ((a % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+}
+
 function update(dt) {
   if (mode !== 'playing') {
     particles = particles.filter(p => p.life > 0);
@@ -660,7 +694,6 @@ function update(dt) {
   elapsed += dt;
   timerEl.textContent = formatTime(elapsed);
 
-  // Textos flotantes
   for (const ft of floatTexts) {
     ft.y += ft.vy * dt;
     ft.alpha -= dt * 1.5;
@@ -668,7 +701,7 @@ function update(dt) {
   floatTexts = floatTexts.filter(ft => ft.alpha > 0);
 
   // ----------------------------------------
-  // MODO PULSO (GEOMETRY DASH)
+  // MODO PULSO (DASH)
   // ----------------------------------------
   if (selectedMode === 'pulse') {
     pulseVy += pulseGravity * dt;
@@ -690,15 +723,13 @@ function update(dt) {
     const playerX = w * 0.25;
     for (const ob of pulseObstacles) {
       ob.x -= pulseSpeed * dt;
-
-      // Colisión con pincho triangular
       if (ob.type === 'spike') {
         if (Math.abs(ob.x - playerX) < 16 && pulseY > pulseFloor - 26) {
+          burst(playerX, pulseY, '#ff5b87', 18);
           finish();
           break;
         }
       } else if (ob.type === 'portal') {
-        // Portal que invierte la gravedad
         if (Math.abs(ob.x - playerX) < 20 && !ob.passed) {
           ob.passed = true;
           pulseGravity *= -1;
@@ -708,7 +739,6 @@ function update(dt) {
         }
       }
 
-      // Recompensa de fotones por sortear
       if (!ob.passed && ob.x < playerX) {
         ob.passed = true;
         photons += 1;
@@ -733,7 +763,6 @@ function update(dt) {
     for (const b of bots) updateSnake(b, dt);
     bots = bots.filter(b => b.alive);
 
-    // Comer orbes
     for (let i = foodOrbs.length - 1; i >= 0; i--) {
       const f = foodOrbs[i];
       if (Math.hypot(playerSnake.x - f.x, playerSnake.y - f.y) < 16) {
@@ -758,10 +787,10 @@ function update(dt) {
       foodOrbs.push({ x: Math.random() * MAP_SIZE, y: Math.random() * MAP_SIZE, r: 2.5 + Math.random() * 2.5, color: Math.random() < 0.6 ? '#6df7e8' : '#ff5b87' });
     }
 
-    // Colisiones
     for (const b of bots) {
       for (let i = 2; i < b.segments.length; i++) {
         if (Math.hypot(playerSnake.x - b.segments[i].x, playerSnake.y - b.segments[i].y) < 10) {
+          burst(playerSnake.x, playerSnake.y, '#ff5b87', 20);
           finish();
           return;
         }
@@ -782,51 +811,75 @@ function update(dt) {
   }
 
   // ----------------------------------------
-  // MODOS CLÁSICO Y EVOLUCIÓN
+  // MODOS CLÁSICO Y EVOLUCIÓN ORIGINALES
   // ----------------------------------------
+  const shape = getGeometryType();
   const destRadius = rings[targetLane] || rings[0];
   currentRadius += (destRadius - currentRadius) * Math.min(1, dt * 18);
 
-  const timeScale = slowTimer > 0 ? 0.5 : 1;
-  const effectiveDt = dt * timeScale;
-  angle += (1.35 + Math.min((level - 1) * 0.14, 1.4)) * effectiveDt * direction;
+  const nextLevel = 1 + Math.max(Math.floor(score / 6), Math.floor(elapsed / 22));
+  if (nextLevel > level) level = nextLevel;
 
-  spawnClock -= effectiveDt;
+  const baseSpeed = 1.35 + Math.min((level - 1) * 0.14, 1.4);
+  angle += baseSpeed * dt * direction;
+
+  spawnClock -= dt;
   if (spawnClock <= 0) {
-    const laneChoice = Math.floor(Math.random() * rings.length);
-    const otherLane = (laneChoice + 1) % rings.length;
-    objects.push({ a: angle + 2.0 * direction, ring: laneChoice, type: 'hazard', hit: false, spin: Math.random() * 6 });
-    objects.push({ a: angle + 2.25 * direction, ring: otherLane, type: 'spark', hit: false, spin: 0 });
+    const laneChoice = Math.random() < 0.5 ? 0 : 1;
+    const otherLane = 1 - laneChoice;
+    objects.push({ a: angle + 2.0 * direction, ring: laneChoice, type: 'hazard', spin: Math.random() * 6, hit: false });
+    objects.push({ a: angle + 2.25 * direction, ring: otherLane, type: 'spark', spin: 0, hit: false });
     spawnClock = Math.max(0.48, 1.25 - (level - 1) * 0.08);
   }
 
-  const px = cx + Math.cos(angle) * currentRadius;
-  const py = cy + Math.sin(angle) * currentRadius;
+  levelEl.textContent = 'NIVEL ' + String(level).padStart(2, '0');
+
+  const playerR = currentRadius * getRadiusModifier(angle, shape);
+  const px = cx + Math.cos(angle) * playerR;
+  const py = cy + Math.sin(angle) * playerR;
+
   trail.unshift({ x: px, y: py, alpha: 1 });
   if (trail.length > 12) trail.pop();
 
   for (const obj of objects) {
     if (obj.hit) continue;
-    const r = rings[obj.ring];
+    const r = rings[obj.ring] * getRadiusModifier(obj.a, shape);
     const ox = cx + Math.cos(obj.a) * r;
     const oy = cy + Math.sin(obj.a) * r;
 
     if (Math.hypot(px - ox, py - oy) < 18) {
       if (obj.type === 'hazard') {
+        burst(px, py, '#ff5b87', 20);
         finish();
         break;
       } else {
         obj.hit = true;
-        score += 1;
+        streak++;
+        score += 1 + Math.floor(streak / 5);
         photons += 1;
+        scoreEl.textContent = score;
+        setStreak();
         updateWalletUI();
         playSound('collect');
         vibrate(20);
+        burst(ox, oy, '#6df7e8', 10);
         spawnFloatText('+1', ox, oy);
       }
     }
   }
-  objects = objects.filter(o => !o.hit);
+
+  objects = objects.filter(o => norm(o.a - angle) < Math.PI * 1.8 && !o.hit);
+  particles = particles.filter(p => p.life > 0);
+  for (const p of particles) {
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vx *= 0.95;
+    p.vy *= 0.95;
+    p.life -= dt;
+  }
+  for (const t of trail) t.alpha -= dt * 2.2;
+  trail = trail.filter(t => t.alpha > 0);
+  shake *= 0.88;
 }
 
 function updateSnake(snake, dt) {
@@ -848,7 +901,7 @@ function updateSnake(snake, dt) {
 }
 
 // ==========================================
-// RENDERIZADO VISUAL (DRAW)
+// RENDERIZADO VISUAL FIEL (CANVAS DRAW)
 // ==========================================
 function draw(time) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -858,25 +911,23 @@ function draw(time) {
   if (shake > 0.1) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
 
   // ----------------------------------------
-  // DIBUJO MODO PULSO (DASH)
+  // MODO PULSO
   // ----------------------------------------
   if (selectedMode === 'pulse') {
-    // Líneas de suelo y techo
-    ctx.strokeStyle = 'var(--cyan)';
+    ctx.strokeStyle = '#6df7e8';
     ctx.lineWidth = 3;
     ctx.shadowBlur = 10;
-    ctx.shadowColor = 'var(--cyan)';
+    ctx.shadowColor = '#6df7e8';
 
     ctx.beginPath();
     ctx.moveTo(0, pulseFloor); ctx.lineTo(w, pulseFloor);
     ctx.moveTo(0, pulseCeil); ctx.lineTo(w, pulseCeil);
     ctx.stroke();
 
-    // Obstáculos
     for (const ob of pulseObstacles) {
       if (ob.type === 'spike') {
-        ctx.fillStyle = 'var(--pink)';
-        ctx.shadowColor = 'var(--pink)';
+        ctx.fillStyle = '#ff5b87';
+        ctx.shadowColor = '#ff5b87';
         ctx.beginPath();
         ctx.moveTo(ob.x - 14, pulseFloor);
         ctx.lineTo(ob.x + 14, pulseFloor);
@@ -884,35 +935,33 @@ function draw(time) {
         ctx.closePath();
         ctx.fill();
       } else {
-        ctx.fillStyle = 'var(--purple)';
-        ctx.shadowColor = 'var(--purple)';
+        ctx.fillStyle = '#bd93f9';
+        ctx.shadowColor = '#bd93f9';
         ctx.beginPath();
         ctx.arc(ob.x, (pulseFloor + pulseCeil) / 2, 14, 0, Math.PI * 2);
         ctx.fill();
       }
     }
 
-    // Jugador (Cubo/Nave con rotación según velocidad)
     const px = w * 0.25;
     ctx.save();
     ctx.translate(px, pulseY);
     ctx.rotate(pulseVy * 0.002);
     ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'var(--cyan)';
+    ctx.shadowColor = '#6df7e8';
     ctx.shadowBlur = 16;
     ctx.fillRect(-11, -11, 22, 22);
     ctx.restore();
 
   } else if (selectedMode === 'constellation' && playerSnake) {
     // ----------------------------------------
-    // DIBUJO MODO CONSTELACIÓN
+    // MODO CONSTELACIÓN
     // ----------------------------------------
     const camX = w / 2 - playerSnake.x;
     const camY = h / 2 - playerSnake.y;
     ctx.save();
     ctx.translate(camX, camY);
 
-    // Muros
     ctx.strokeStyle = 'rgba(255, 91, 135, 0.4)';
     ctx.lineWidth = 4;
     ctx.strokeRect(0, 0, MAP_SIZE, MAP_SIZE);
@@ -942,57 +991,141 @@ function draw(time) {
 
   } else {
     // ----------------------------------------
-    // DIBUJO MODOS CLÁSICO / EVOLUCIÓN
+    // MODOS ORIGINALES (CLÁSICO / EVOLUCIÓN)
     // ----------------------------------------
     for (const s of stars) {
+      const twinkle = 0.75 + Math.sin(time * 0.001 + s.phase) * 0.25;
+      ctx.globalAlpha = s.a * twinkle;
       ctx.fillStyle = '#d4dcff';
-      ctx.globalAlpha = s.a;
       ctx.beginPath();
       ctx.arc(s.x * w, s.y * h, s.r, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
 
-    for (let r of rings) {
+    // Núcleo orbital con gradiente radial de profundidad[span_0](start_span)[span_0](end_span)
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, rings[0] * 0.72);
+    glow.addColorStop(0, '#252b55');
+    glow.addColorStop(0.58, '#151a36');
+    glow.addColorStop(1, '#0c1024');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rings[0] * 0.72, 0, Math.PI * 2);
+    ctx.fill();
+
+    const shape = getGeometryType();
+
+    // Anillos y arcos de neón[span_1](start_span)[span_1](end_span)
+    for (let ring = 0; ring < rings.length; ring++) {
+      const r = rings[ring];
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(98, 105, 138, 0.25)';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = (targetLane === ring && mode === 'playing') ? '#6df7e844' : '#62698a42';
+      ctx.lineWidth = (targetLane === ring && mode === 'playing') ? 2 : 1;
       ctx.stroke();
+
+      if (targetLane === ring && mode === 'playing') {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, angle - 0.36, angle + 0.18);
+        ctx.strokeStyle = '#6df7e866';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      }
     }
 
+    // Objetos con sombras y rotaciones originales[span_2](start_span)[span_2](end_span)
     for (const obj of objects) {
-      const r = rings[obj.ring];
-      const ox = cx + Math.cos(obj.a) * r;
-      const oy = cy + Math.sin(obj.a) * r;
-      ctx.fillStyle = obj.type === 'hazard' ? 'var(--pink)' : 'var(--cyan)';
+      const r = rings[obj.ring] * getRadiusModifier(obj.a, shape);
+      const x = cx + Math.cos(obj.a) * r;
+      const y = cy + Math.sin(obj.a) * r;
+
+      if (obj.type === 'hazard') {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(obj.spin + time * 0.0004);
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#ff4777';
+        ctx.fillStyle = '#ff5b87';
+        ctx.beginPath();
+        for (let i = 0; i < 8; i++) {
+          const a = i * Math.PI / 4;
+          const rr = i % 2 ? 7 : 13;
+          ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      } else {
+        ctx.save();
+        ctx.shadowBlur = 19;
+        ctx.shadowColor = '#6df7e8';
+        ctx.fillStyle = '#b2fff5';
+        ctx.beginPath();
+        ctx.arc(x, y, 5.5 + Math.sin(time * 0.008 + obj.a) * 1.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#6df7e8aa';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x, y, 10, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // Estela de nave
+    for (const t of trail) {
+      ctx.globalAlpha = t.alpha * 0.35;
+      ctx.fillStyle = '#6df7e8';
       ctx.beginPath();
-      ctx.arc(ox, oy, 7, 0, Math.PI * 2);
+      ctx.arc(t.x, t.y, 4, 0, Math.PI * 2);
       ctx.fill();
     }
+    ctx.globalAlpha = 1;
 
-    const px = cx + Math.cos(angle) * currentRadius;
-    const py = cy + Math.sin(angle) * currentRadius;
+    // Nave del jugador[span_3](start_span)[span_3](end_span)
+    const playerR = currentRadius * getRadiusModifier(angle, shape);
+    const px = cx + Math.cos(angle) * playerR;
+    const py = cy + Math.sin(angle) * playerR;
 
-    // Render del skin equipado
     ctx.save();
-    ctx.translate(px, py);
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowBlur = 18;
-    ctx.shadowColor = 'var(--cyan)';
+    ctx.shadowBlur = 24;
+    ctx.shadowColor = '#6df7e8';
 
     if (equippedSkin === 'pulse') {
+      ctx.translate(px, py);
+      ctx.rotate(angle + Math.PI / 2);
+      ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.moveTo(10, 0); ctx.lineTo(-8, -8); ctx.lineTo(-8, 8); ctx.closePath();
+      ctx.moveTo(0, -9); ctx.lineTo(7, 7); ctx.lineTo(-7, 7); ctx.closePath();
       ctx.fill();
     } else if (equippedSkin === 'vortex') {
+      ctx.translate(px, py);
+      ctx.fillStyle = '#ffffff';
       ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = 'var(--cyan)'; ctx.lineWidth = 2;
+      ctx.strokeStyle = '#6df7e8'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI); ctx.stroke();
     } else {
-      ctx.beginPath(); ctx.arc(0, 0, 6.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#e5fffb';
+      ctx.beginPath();
+      ctx.arc(px, py, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#6df7e8';
+      ctx.beginPath();
+      ctx.arc(px, py, 3.2, 0, Math.PI * 2);
+      ctx.fill();
     }
     ctx.restore();
+
+    // Partículas de explosión[span_4](start_span)[span_4](end_span)
+    for (const p of particles) {
+      ctx.globalAlpha = Math.max(0, p.life / p.max);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
   }
 
   // Textos flotantes
