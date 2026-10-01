@@ -11,7 +11,6 @@
   --purple: #bd93f9;
 }
 
-/* Temas dinámicos */
 body.theme-vaporwave {
   --bg: #100620;
   --cyan: #05ffa1;
@@ -46,7 +45,7 @@ html, body {
   height: 100%;
   height: 100dvh;
   overflow: hidden;
-  background: radial-gradient(ellipse at 50% 48%, #171a36 0%, #0d1023 36%, var(--bg) 74%);
+  background: radial-gradient(ellipse at 50% 48%, #171a36 0%, #0d1023 36%, #090b18 74%);
   isolation: isolate;
   cursor: pointer;
 }
@@ -61,18 +60,17 @@ canvas {
 }
 
 /* ===================================================
-   LOGOTIPO ORBITAL
+   LOGOTIPO ORBITAL ORIGINAL
 =================================================== */
 .brand-logo {
-  width: 72px;
-  height: 72px;
+  width: 76px;
+  height: 76px;
   margin-bottom: 2px;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-
 .logo-svg { width: 100%; height: 100%; overflow: visible; }
 .logo-orbit { fill: none; stroke-width: 1.8; }
 .main-orbit { stroke: var(--cyan); filter: drop-shadow(0 0 6px var(--cyan)); }
@@ -98,7 +96,7 @@ canvas {
   border: 1px solid rgba(253, 216, 53, 0.4);
   padding: 4px 10px;
   border-radius: 20px;
-  margin-top: 4px;
+  margin: 4px 0 2px;
 }
 
 /* ===================================================
@@ -107,9 +105,9 @@ canvas {
 .topbar {
   position: absolute;
   z-index: 2;
-  top: max(14px, env(safe-area-inset-top));
-  left: 18px;
-  right: 18px;
+  top: max(20px, env(safe-area-inset-top));
+  left: 20px;
+  right: 20px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -123,18 +121,18 @@ canvas {
   gap: 2px;
 }
 .score-wrap strong {
-  font-size: 28px;
+  font-size: 32px;
   line-height: 1;
   font-weight: 600;
-  letter-spacing: -1px;
+  letter-spacing: -1.5px;
 }
 .meta-wrap { text-align: center; min-width: 44px; }
-.meta-wrap strong { font: 500 12px/1.3 'DM Mono', monospace; color: #c8c9df; }
-.eyebrow { font: 500 8.5px/1.5 'DM Mono', monospace; letter-spacing: 1.6px; color: var(--muted); }
+.meta-wrap strong { font: 500 13px/1.3 'DM Mono', monospace; color: #c8c9df; }
+.eyebrow { font: 500 9px/1.5 'DM Mono', monospace; letter-spacing: 2px; color: var(--muted); }
 
 .streak {
   position: absolute;
-  top: 38px;
+  top: 45px;
   left: 0;
   display: flex;
   gap: 4px;
@@ -156,19 +154,19 @@ canvas {
 =================================================== */
 .powerup-hud {
   position: absolute;
-  top: 72px;
-  left: 18px;
+  top: 75px;
+  left: 20px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
   z-index: 2;
   pointer-events: none;
 }
 .hud-item {
-  font: 600 9.5px 'DM Mono', monospace;
+  font: 600 10px 'DM Mono', monospace;
   background: rgba(14, 18, 38, 0.88);
   border: 1px solid #353a5e;
-  padding: 3px 8px;
+  padding: 4px 8px;
   border-radius: 4px;
   letter-spacing: 1px;
 }
@@ -177,7 +175,7 @@ canvas {
 #hud-slow { color: var(--yellow); border-color: rgba(253, 216, 53, 0.45); }
 
 /* ===================================================
-   CONTROLES CONSTELACIÓN
+   CONTROLES TÁCTILES CONSTELACIÓN
 =================================================== */
 .const-controls {
   position: absolute;
@@ -187,8 +185,8 @@ canvas {
 }
 .joystick-zone {
   position: absolute;
-  bottom: max(25px, env(safe-area-inset-bottom));
-  left: 20px;
+  bottom: max(30px, env(safe-area-inset-bottom));
+  left: 24px;
   width: 120px;
   height: 120px;
   pointer-events: auto;
@@ -216,10 +214,10 @@ canvas {
 }
 .boost-btn {
   position: absolute;
-  bottom: max(30px, env(safe-area-inset-bottom));
-  right: 20px;
-  width: 74px;
-  height: 74px;
+  bottom: max(35px, env(safe-area-inset-bottom));
+  right: 24px;
+  width: 76px;
+  height: 76px;
   border-radius: 50%;
   background: rgba(255, 91, 135, 0.25);
   border: 2px solid var(--pink);
@@ -253,7 +251,7 @@ canvas {
   align-items: center;
   flex-direction: column;
   text-align: center;
-  padding: 12px 18px;
+  padding: 16px 20px;
   transition: opacity 0.25s ease, transform 0.25s ease;
   pointer-events: auto;
 }
@@ -264,34 +262,34 @@ canvas {
 }
 .center-ui h1 {
   margin: 2px 0 0;
-  font-size: clamp(32px, 8vw, 46px);
+  font-size: clamp(38px, 10vw, 56px);
   line-height: 1;
   font-weight: 600;
   letter-spacing: -2px;
 }
 .center-ui p#subline {
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.5;
   color: #a6a9c3;
-  margin: 4px 0 10px;
+  margin: 6px 0 14px;
 }
 
 .mode-selector, .diff-selector, .control-selector {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 7px;
+  gap: 5px;
+  margin-bottom: 8px;
   width: 100%;
   max-width: 320px;
 }
-.btn-group { display: flex; gap: 4px; }
+.btn-group { display: flex; gap: 5px; }
 .opt-btn {
   flex: 1;
   background: #14172f;
   color: #8c90b3;
   border: 1px solid #2e3357;
-  padding: 7px 2px;
-  font: 500 8.5px 'DM Mono', monospace;
+  padding: 8px 4px;
+  font: 500 9px 'DM Mono', monospace;
   border-radius: 4px;
   min-width: 0;
   box-shadow: none;
@@ -301,7 +299,7 @@ canvas {
   background: #252b57;
   color: var(--cyan);
   border-color: var(--cyan);
-  box-shadow: 0 0 10px rgba(109, 247, 232, 0.2);
+  box-shadow: 0 0 12px rgba(109, 247, 232, 0.2);
 }
 
 .menu-actions {
@@ -313,14 +311,14 @@ canvas {
 }
 .primary-btn {
   font-family: 'DM Mono', monospace;
-  font-weight: 600;
-  font-size: 12px;
-  letter-spacing: 1.5px;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 1.6px;
   color: #08131a;
   background: var(--cyan);
   border: 0;
   border-radius: 4px;
-  padding: 13px 26px;
+  padding: 15px 24px;
   width: 100%;
   max-width: 250px;
   box-shadow: 0 0 24px rgba(109, 247, 232, 0.25);
@@ -351,7 +349,7 @@ canvas {
   border-color: rgba(253, 216, 53, 0.4);
 }
 
-#hint { margin-top: 10px; color: #6f7396; font: 9px/1.5 'DM Mono', monospace; }
+#hint { margin-top: 14px; color: #6f7396; font: 9px/1.5 'DM Mono', monospace; }
 
 /* ===================================================
    TIENDA Y MODALES
@@ -359,13 +357,13 @@ canvas {
 .board, .modal-box {
   position: absolute;
   z-index: 30;
-  left: 18px;
-  right: 18px;
+  left: 20px;
+  right: 20px;
   top: 50%;
   transform: translateY(-50%);
-  max-height: 78dvh;
+  max-height: 76dvh;
   overflow-y: auto;
-  padding: 20px 16px;
+  padding: 22px 18px;
   background: rgba(13, 16, 36, 0.98);
   border: 1px solid #343958;
   border-radius: 12px;
@@ -412,18 +410,18 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 .modal-head h2 { font-size: 24px; margin: 4px 0 0; }
 .close-board {
-  min-width: 32px;
-  width: 32px;
-  height: 32px;
+  min-width: 34px;
+  width: 34px;
+  height: 34px;
   padding: 0;
   border: 1px solid #353a59;
   background: transparent;
   color: #c9cbe0;
-  font: 20px/1 'Space Grotesk', sans-serif;
+  font: 22px/1 'Space Grotesk', sans-serif;
   border-radius: 4px;
   cursor: pointer;
 }
@@ -431,7 +429,7 @@ canvas {
 .board-filter-group {
   display: flex;
   gap: 4px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   border-bottom: 1px solid #20243d;
   padding-bottom: 8px;
   overflow-x: auto;
@@ -441,7 +439,7 @@ canvas {
   border: 1px solid #2b304f;
   color: #7f83a5;
   font: 500 8.5px 'DM Mono', monospace;
-  padding: 4px 7px;
+  padding: 5px 8px;
   border-radius: 4px;
   cursor: pointer;
   white-space: nowrap;
@@ -455,32 +453,32 @@ canvas {
   align-items: center;
 }
 .board-columns {
-  padding: 0 4px 6px;
+  padding: 0 6px 8px;
   color: #777c9b;
-  font: 8.5px 'DM Mono', monospace;
+  font: 9px 'DM Mono', monospace;
   border-bottom: 1px solid #292d48;
 }
 .board-columns span:nth-child(n+2), .run-row span:nth-child(n+2) { text-align: right; }
 .run-list { list-style: none; margin: 0; padding: 0; }
 .run-row {
-  padding: 8px 4px;
+  padding: 10px 6px;
   border-bottom: 1px solid #1c2035;
   font: 11px 'DM Mono', monospace;
 }
-.run-row small { display: block; color: #777c9b; font-size: 8.5px; }
-.empty-board { color: #999db6; text-align: center; font-size: 12px; padding: 18px 0; }
+.run-row small { display: block; color: #777c9b; font-size: 9px; }
+.empty-board { color: #999db6; text-align: center; font-size: 12px; padding: 20px 0; }
 
 .bottom-ui {
   position: absolute;
   z-index: 2;
-  bottom: max(14px, env(safe-area-inset-bottom));
-  left: 18px;
-  right: 18px;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  left: 20px;
+  right: 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   color: #7f829e;
-  font: 8.5px 'DM Mono', monospace;
+  font: 9px 'DM Mono', monospace;
   letter-spacing: 1.2px;
   pointer-events: none;
 }
@@ -509,9 +507,9 @@ canvas {
   transform: translateX(-50%) scale(0.7);
   background: var(--pink);
   color: #fff;
-  font: 700 13px 'Space Grotesk', sans-serif;
+  font: 700 14px 'Space Grotesk', sans-serif;
   letter-spacing: 2px;
-  padding: 5px 14px;
+  padding: 6px 16px;
   border-radius: 20px;
   opacity: 0;
   pointer-events: none;
