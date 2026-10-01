@@ -115,6 +115,10 @@ canvas {
   pointer-events: none;
 }
 
+.topbar[hidden] {
+  display: none !important;
+}
+
 .score-wrap, .meta-wrap {
   display: flex;
   flex-direction: column;
@@ -137,8 +141,6 @@ canvas {
   font: 500 13px/1.3 'DM Mono', monospace;
   color: #c8c9df;
 }
-
-.attempt-wrap { text-align: right; }
 
 .eyebrow {
   font: 500 9px/1.5 'DM Mono', monospace;
@@ -435,7 +437,7 @@ canvas {
 }
 
 /* ===================================================
-   MODALES
+   MODALES (HISTORIAL Y ACTUALIZACIONES)
 =================================================== */
 .board, .modal-box {
   position: absolute;
@@ -496,7 +498,7 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .board-head h2 { font-size: 24px; margin: 4px 0 0; }
@@ -511,6 +513,35 @@ canvas {
   color: #c9cbe0;
   font: 20px/1 'Space Grotesk', sans-serif;
   border-radius: 4px;
+}
+
+/* Filtros de pestaña en el Historial */
+.board-filter-group {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #20243d;
+  padding-bottom: 8px;
+  overflow-x: auto;
+}
+
+.filter-btn {
+  background: transparent;
+  border: 1px solid #2b304f;
+  color: #7f83a5;
+  font: 500 8.5px 'DM Mono', monospace;
+  padding: 5px 8px;
+  border-radius: 4px;
+  min-width: 0;
+  box-shadow: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.filter-btn.active {
+  background: #1e2448;
+  color: var(--cyan);
+  border-color: var(--cyan);
 }
 
 .board-columns, .run-row {
