@@ -15,7 +15,8 @@
   <main class="game-shell">
     <canvas id="game" aria-label="Juego Órbita"></canvas>
     
-    <header class="topbar" aria-live="polite">
+    <!-- Barra superior de juego: oculta en el menú principal -->
+    <header class="topbar" id="game-topbar" aria-live="polite" hidden>
       <div class="score-wrap">
         <span class="eyebrow" id="score-label">PUNTOS</span>
         <strong id="score">0</strong>
@@ -28,10 +29,6 @@
         <span class="eyebrow">RÉCORD</span>
         <strong id="best">0</strong>
       </div>
-      <div class="meta-wrap attempt-wrap">
-        <span class="eyebrow">INTENTO</span>
-        <strong id="attempt">01</strong>
-      </div>
       <div id="streak" class="streak" aria-label="Racha"></div>
     </header>
 
@@ -41,7 +38,7 @@
       <div id="hud-slow" class="hud-item" hidden>⏳ RELENTIZAR</div>
     </div>
 
-    <!-- Controles de pantalla táctil para modo Constelación -->
+    <!-- Controles en pantalla para modo Constelación -->
     <div id="const-controls" class="const-controls" hidden>
       <div id="joystick-zone" class="joystick-zone">
         <div id="joystick-base" class="joystick-base">
@@ -102,7 +99,6 @@
         </div>
       </div>
 
-      <!-- Selector de Tipo de Control táctil -->
       <div class="control-selector" id="control-container" hidden>
         <span class="eyebrow">CONTROL MÓVIL (CONSTELACIÓN)</span>
         <div class="btn-group" id="control-group">
@@ -120,15 +116,15 @@
     <section id="update-modal" class="modal-box" hidden>
       <div class="modal-head">
         <div>
-          <span class="eyebrow" id="update-tag">VERSIÓN 2.3.0</span>
+          <span class="eyebrow" id="update-tag">VERSIÓN 2.3.2</span>
           <h2>¡Novedades!</h2>
         </div>
       </div>
       <div class="update-body">
         <ul id="update-list">
-          <li><strong>Nuevo Modo Constelación:</strong> Supervivencia abierta estilo Slither.io contra cometas rivales bot.</li>
-          <li><strong>Personalización de control:</strong> Elige entre seguimiento táctil directo o joystick virtual en pantalla.</li>
-          <li><strong>Mecánica de Turbo:</strong> Sacrifica masa de estela para acelerar y encerrar rivales.</li>
+          <li><strong>Interfaz Limpia:</strong> La barra de juego sólo aparece durante la partida.</li>
+          <li><strong>Historial por Modo:</strong> Filtra tus récords por Clásico, Evolución o Constelación.</li>
+          <li><strong>Corrección de Temblor:</strong> Solucionado el bug que dejaba la pantalla vibrando tras chocar.</li>
         </ul>
       </div>
       <label class="modal-check">
@@ -138,17 +134,26 @@
       <button id="close-update" class="primary-btn update-close-btn" type="button">ENTENDIDO</button>
     </section>
 
-    <!-- Historial de Intentos -->
+    <!-- Historial de Intentos con Selector de Modo -->
     <section id="board" class="board" aria-label="Tabla de intentos" hidden>
       <div class="board-head">
         <div>
-          <span class="eyebrow">TU HISTORIAL</span>
-          <h2>Intentos</h2>
+          <span class="eyebrow">HISTORIAL</span>
+          <h2>Récords</h2>
         </div>
         <button id="close-board" class="close-board" type="button" aria-label="Cerrar">×</button>
       </div>
+
+      <!-- Filtro de modos dentro del historial -->
+      <div class="board-filter-group" id="board-filters">
+        <button type="button" class="filter-btn active" data-filter="all">TODOS</button>
+        <button type="button" class="filter-btn" data-filter="classic">CLÁSICO</button>
+        <button type="button" class="filter-btn" data-filter="evolution">EVOLUCIÓN</button>
+        <button type="button" class="filter-btn" data-filter="constellation">CONSTELACIÓN</button>
+      </div>
+
       <div class="board-columns">
-        <span>MODO / INTENTO</span>
+        <span>MODO / INFO</span>
         <span>PUNTOS</span>
         <span>TIEMPO</span>
       </div>
