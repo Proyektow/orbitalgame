@@ -4,9 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#090b18">
-  <title>Órbita Evolución</title>
+  <title>Órbita Multiverso</title>
   
-  <!-- Favicon e icono para móvil con bola en medio y 2 esferas de colores -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%23090b18'/><ellipse cx='50' cy='50' rx='40' ry='18' fill='none' stroke='%23343958' stroke-width='3' transform='rotate(-28 50 50)'/><circle cx='50' cy='50' r='9' fill='%23ffffff'/><circle cx='80' cy='34' r='7' fill='%236df7e8'/><circle cx='20' cy='66' r='5' fill='%23ff5b87'/></svg>">
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%23090b18'/><ellipse cx='50' cy='50' rx='40' ry='18' fill='none' stroke='%23343958' stroke-width='3' transform='rotate(-28 50 50)'/><circle cx='50' cy='50' r='9' fill='%23ffffff'/><circle cx='80' cy='34' r='7' fill='%236df7e8'/><circle cx='20' cy='66' r='5' fill='%23ff5b87'/></svg>">
   <link rel="manifest" href="manifest.json">
@@ -18,7 +17,7 @@
     
     <header class="topbar" aria-live="polite">
       <div class="score-wrap">
-        <span class="eyebrow">PUNTOS</span>
+        <span class="eyebrow" id="score-label">PUNTOS</span>
         <strong id="score">0</strong>
       </div>
       <div class="meta-wrap">
@@ -42,51 +41,40 @@
       <div id="hud-slow" class="hud-item" hidden>⏳ RELENTIZAR</div>
     </div>
 
+    <!-- Controles de pantalla táctil para modo Constelación -->
+    <div id="const-controls" class="const-controls" hidden>
+      <div id="joystick-zone" class="joystick-zone">
+        <div id="joystick-base" class="joystick-base">
+          <div id="joystick-knob" class="joystick-knob"></div>
+        </div>
+      </div>
+      <button id="boost-btn" class="boost-btn" type="button">TURBO</button>
+    </div>
+
     <!-- Menú Central -->
     <div class="center-ui" id="overlay">
-      <!-- Nuevo Logotipo Vectorial con Núcleo y dos Esferas -->
       <div class="brand-logo" aria-hidden="true">
         <svg viewBox="0 0 120 120" class="logo-svg">
           <defs>
-            <!-- Filtros de brillo Neón -->
             <filter id="glow-cyan" x="-50%" y="-50%" width="200%" height="200%">
               <feGaussianBlur stdDeviation="3.5" result="blur"/>
-              <feMerge>
-                <feMergeNode in="blur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
             </filter>
             <filter id="glow-pink" x="-50%" y="-50%" width="200%" height="200%">
               <feGaussianBlur stdDeviation="3.5" result="blur"/>
-              <feMerge>
-                <feMergeNode in="blur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
             </filter>
             <filter id="glow-core" x="-50%" y="-50%" width="200%" height="200%">
               <feGaussianBlur stdDeviation="4" result="blur"/>
-              <feMerge>
-                <feMergeNode in="blur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
             </filter>
           </defs>
-
-          <!-- Órbita Secundaria de fondo -->
           <ellipse cx="60" cy="60" rx="46" ry="21" class="logo-orbit sub-orbit" transform="rotate(38 60 60)"/>
-          
-          <!-- Anillo de contención del núcleo -->
           <circle cx="60" cy="60" r="14" class="logo-core-halo"/>
-
-          <!-- Bola central / Núcleo de energía -->
           <circle cx="60" cy="60" r="7" class="logo-core-sphere" filter="url(#glow-core)"/>
-
-          <!-- Órbita Principal animada -->
           <g class="rotating-group">
             <ellipse cx="60" cy="60" rx="48" ry="22" class="logo-orbit main-orbit" transform="rotate(-28 60 60)"/>
-            <!-- Esfera 1: Cian (Orbital Exterior) -->
             <circle cx="98" cy="40" r="6" class="sat-cyan" filter="url(#glow-cyan)"/>
-            <!-- Esfera 2: Rosa (Orbital Interior / Opuesta) -->
             <circle cx="22" cy="80" r="4.5" class="sat-pink" filter="url(#glow-pink)"/>
           </g>
         </svg>
@@ -94,13 +82,14 @@
 
       <p class="eyebrow" id="eyebrow">SISTEMA ORBITAL</p>
       <h1 id="headline">Órbita</h1>
-      <p id="subline">Selecciona tu modo de juego y despega.</p>
+      <p id="subline">Elige modalidad y despega.</p>
 
       <div class="mode-selector">
-        <span class="eyebrow">MODO DE JUEGO</span>
+        <span class="eyebrow">MODALIDAD</span>
         <div class="btn-group" id="mode-group">
           <button type="button" class="opt-btn active" data-mode="classic">CLÁSICO</button>
           <button type="button" class="opt-btn" data-mode="evolution">EVOLUCIÓN</button>
+          <button type="button" class="opt-btn" data-mode="constellation">CONSTELACIÓN</button>
         </div>
       </div>
 
@@ -113,25 +102,33 @@
         </div>
       </div>
 
+      <!-- Selector de Tipo de Control táctil -->
+      <div class="control-selector" id="control-container" hidden>
+        <span class="eyebrow">CONTROL MÓVIL (CONSTELACIÓN)</span>
+        <div class="btn-group" id="control-group">
+          <button type="button" class="opt-btn active" data-control="follow">SEGUIR DEDO</button>
+          <button type="button" class="opt-btn" data-control="joystick">JOYSTICK</button>
+        </div>
+      </div>
+
       <button id="start" class="primary-btn" type="button">DESPEGAR <span>↗</span></button>
       <button id="open-board" class="board-trigger" type="button">VER HISTORIAL</button>
-      <small id="hint">TOCA PARA CAMBIAR DE ANILLO · ESPACIO O FLECHAS</small>
+      <small id="hint">ESPACIO O CLIC PARA JUGAR</small>
     </div>
 
-    <!-- Modal de Actualizaciones (Changelog) -->
+    <!-- Modal de Actualizaciones -->
     <section id="update-modal" class="modal-box" hidden>
       <div class="modal-head">
         <div>
-          <span class="eyebrow" id="update-tag">VERSIÓN 2.1.0</span>
+          <span class="eyebrow" id="update-tag">VERSIÓN 2.3.0</span>
           <h2>¡Novedades!</h2>
         </div>
       </div>
       <div class="update-body">
         <ul id="update-list">
-          <li><strong>Nuevo Logotipo Órbita:</strong> Bola cuántica central y esferas duales de neón.</li>
-          <li><strong>Modo Evolución:</strong> Dificultad escalable con hasta 3 carriles dinámicos.</li>
-          <li><strong>Geometrías variables:</strong> Órbitas en elipses, hexágonos y octógonos.</li>
-          <li><strong>Power-Ups:</strong> Escudo protector, imán de luz y cámara lenta.</li>
+          <li><strong>Nuevo Modo Constelación:</strong> Supervivencia abierta estilo Slither.io contra cometas rivales bot.</li>
+          <li><strong>Personalización de control:</strong> Elige entre seguimiento táctil directo o joystick virtual en pantalla.</li>
+          <li><strong>Mecánica de Turbo:</strong> Sacrifica masa de estela para acelerar y encerrar rivales.</li>
         </ul>
       </div>
       <label class="modal-check">
