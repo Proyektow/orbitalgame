@@ -9,13 +9,13 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%23090b18'/><ellipse cx='50' cy='50' rx='40' ry='18' fill='none' stroke='%23343958' stroke-width='3' transform='rotate(-28 50 50)'/><circle cx='50' cy='50' r='9' fill='%23ffffff'/><circle cx='80' cy='34' r='7' fill='%236df7e8'/><circle cx='20' cy='66' r='5' fill='%23ff5b87'/></svg>">
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%23090b18'/><ellipse cx='50' cy='50' rx='40' ry='18' fill='none' stroke='%23343958' stroke-width='3' transform='rotate(-28 50 50)'/><circle cx='50' cy='50' r='9' fill='%23ffffff'/><circle cx='80' cy='34' r='7' fill='%236df7e8'/><circle cx='20' cy='66' r='5' fill='%23ff5b87'/></svg>">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=2.6.0">
+  <link rel="stylesheet" href="style.css?v=2.7.0">
 </head>
 <body>
   <main class="game-shell">
     <canvas id="game" aria-label="Juego Órbita"></canvas>
     
-    <!-- Barra superior de juego: solo visible en partida activa -->
+    <!-- Barra superior de juego -->
     <header class="topbar" id="game-topbar" aria-live="polite" hidden>
       <div class="score-wrap">
         <span class="eyebrow" id="score-label">PUNTOS</span>
@@ -33,6 +33,8 @@
         <span class="eyebrow">RÉCORD</span>
         <strong id="best">0</strong>
       </div>
+      <!-- Botón de Pausa integrado -->
+      <button id="pause-btn" class="pause-trigger-btn" type="button" aria-label="Pausa">⏸</button>
       <div id="streak" class="streak" aria-label="Racha"></div>
     </header>
 
@@ -51,6 +53,21 @@
       </div>
       <button id="boost-btn" class="boost-btn" type="button">TURBO</button>
     </div>
+
+    <!-- Menú de Pausa -->
+    <section id="pause-modal" class="modal-box pause-modal" hidden>
+      <div class="modal-head">
+        <div>
+          <span class="eyebrow">PARTIDA DETENIDA</span>
+          <h2>Pausa</h2>
+        </div>
+      </div>
+      <p class="pause-desc">El universo se ha congelado temporalmente.</p>
+      <div class="pause-actions">
+        <button id="resume-btn" class="primary-btn" type="button">CONTINUAR <span>▶</span></button>
+        <button id="quit-btn" class="board-trigger quit-trigger" type="button">SALIR AL MENÚ</button>
+      </div>
+    </section>
 
     <!-- Menú Central -->
     <div class="center-ui" id="overlay">
@@ -131,16 +148,16 @@
     <section id="update-modal" class="modal-box" hidden>
       <div class="modal-head">
         <div>
-          <span class="eyebrow" id="update-tag">VERSIÓN 2.6.0</span>
-          <h2>¡Actualizado!</h2>
+          <span class="eyebrow" id="update-tag">VERSIÓN 2.7.0</span>
+          <h2>¡Novedades del Sistema!</h2>
         </div>
       </div>
       <div class="update-body">
         <ul id="update-list">
-          <li><strong>Restauración Gráfica:</strong> Efectos de brillo de neón, canvas y texturas orbitales intactas.</li>
-          <li><strong>Crash Resuelto:</strong> La pantalla de colisión ahora devuelve al menú limpiamente sin congelarse.</li>
-          <li><strong>Tienda y Fotones:</strong> Recoge energía y personaliza nave y temas visuales.</li>
-          <li><strong>Modo Pulso (Dash):</strong> Salta obstáculos geométricos al ritmo del sintetizador.</li>
+          <li><strong>Pausa y Salir:</strong> Ahora puedes detener la partida en cualquier momento o volver al menú.</li>
+          <li><strong>Modo Pulso Mejorado:</strong> Físicas reales tipo Geometry Dash, plataformas elevadas y orbes de salto.</li>
+          <li><strong>Bots de Constelación Inteligentes:</strong> Detección de colisiones predictiva, esquivas y tácticas de encierro.</li>
+          <li><strong>Movimiento Ultra Fluido:</strong> Interpolación suave de serpientes sin tirones en móviles.</li>
         </ul>
       </div>
       <label class="modal-check">
@@ -187,7 +204,7 @@
     <div id="reverse-banner" class="alert-banner">¡INVERSIÓN!</div>
   </main>
 
-  <script src="game.js?v=2.6.0"></script>
+  <script src="game.js?v=2.7.0"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
