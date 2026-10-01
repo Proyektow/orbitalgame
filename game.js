@@ -1,3 +1,6 @@
+// CONTROL DE VERSIÓN: Modifica este número cada vez que lances una actualización
+const CURRENT_VERSION = '2.1.0';
+
 const canvas = document.querySelector('#game');
 const ctx = canvas.getContext('2d');
 const overlay = document.querySelector('#overlay');
@@ -17,16 +20,37 @@ const shell = document.querySelector('.game-shell');
 const reverseBanner = document.querySelector('#reverse-banner');
 const diffContainer = document.querySelector('#diff-container');
 
+// Sistema de Modal de Actualización
+const updateModal = document.querySelector('#update-modal');
+const closeUpdateBtn = document.querySelector('#close-update');
+const dontShowCheck = document.querySelector('#dont-show-check');
+const updateTag = document.querySelector('#update-tag');
+
+function checkUpdates() {
+  const dismissedVersion = localStorage.getItem('orbita-dismissed-version');
+  if (dismissedVersion !== CURRENT_VERSION) {
+    updateTag.textContent = `VERSIÓN ${CURRENT_VERSION}`;
+    updateModal.hidden = false;
+  }
+}
+
+closeUpdateBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (dontShowCheck.checked) {
+    localStorage.setItem('orbita-dismissed-version', CURRENT_VERSION);
+  }
+  updateModal.hidden = true;
+});
+
 // Elementos HUD de Power-ups
 const hudShield = document.querySelector('#hud-shield');
 const hudMagnet = document.querySelector('#hud-magnet');
 const hudSlow = document.querySelector('#hud-slow');
 
-// Opciones de juego
-let selectedMode = 'classic'; // 'classic' | 'evolution'
-let selectedDiff = 'easy';    // 'easy' | 'normal' | 'hard'
+let selectedMode = 'classic';
+let selectedDiff = 'easy';
 
-// Selección de configuración en interfaz
+// Selector de modo y dificultad
 document.querySelectorAll('#mode-group .opt-btn').forEach(btn => {
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -46,7 +70,7 @@ document.querySelectorAll('#diff-group .opt-btn').forEach(btn => {
   });
 });
 
-// Sintetizador de sonido con Web Audio
+// Audio sintético
 let audioCtx = null;
 function playSound(type) {
   try {
@@ -99,26 +123,23 @@ function vibrate(pattern) {
   if ('vibrate' in navigator) navigator.vibrate(pattern);
 }
 
-// Variables de lienzo y dimensiones
 let w = 0, h = 0, dpr = 1, cx = 0, cy = 0;
-let rings = []; // radios de carriles
+let rings = [];
 let mode = 'ready'; 
 let angle = -Math.PI / 2;
 let targetLane = 0;
 let currentRadius = 0; 
 let score = 0, streak = 0, elapsed = 0, spawnClock = 0, lastTime = 0, shake = 0, level = 1;
-let direction = 1; // 1: horario, -1: antihorario
+let direction = 1;
 let reverseTimer = 0;
 let trail = [];
 
-// Power-ups activos
 let shieldActive = false;
 let magnetTimer = 0;
 let slowTimer = 0;
 
 let objects = [], particles = [];
 
-// Persistencia de datos
 let best = Number(localStorage.getItem('orbita-best') || 0);
 let attemptCount = Number(localStorage.getItem('orbita-attempts') || 0);
 let runs = [];
@@ -149,9 +170,9 @@ function resize() {
 
   const baseOuter = Math.min(w, h) * 0.35;
   if (selectedMode === 'evolution' && level >= 3) {
-    rings = [baseOuter, baseOuter * 0.73, baseOuter * 0.48]; // 3 carriles
+    rings = [baseOuter, baseOuter * 0.73, baseOuter * 0.48];
   } else {
-    rings = [baseOuter, baseOuter * 0.65]; // 2 carriles
+    rings = [baseOuter, baseOuter * 0.65];
   }
 
   if (currentRadius === 0) currentRadius = rings[0];
@@ -159,7 +180,6 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// Cálculo de forma según el nivel o dificultad
 function getGeometryType() {
   if (selectedMode === 'classic') return 'circle';
   if (selectedDiff === 'hard' || level >= 6) return 'octagon';
@@ -169,17 +189,9 @@ function getGeometryType() {
 }
 
 function getRadiusModifier(theta, shape) {
-  if (shape === 'ellipse') {
-    return 1 + 0.18 * Math.cos(2 * theta);
-  }
-  if (shape === 'hexagon') {
-    const n = 6;
-    return 1 + 0.08 * Math.cos(n * theta);
-  }
-  if (shape === 'octagon') {
-    const n = 8;
-    return 1 + 0.1 * Math.cos(n * theta);
-  }
+  if (shape === 'ellipse') return 1 + 0.18 * Math.cos(2 * theta);
+  if (shape === 'hexagon') return 1 + 0.08 * Math.cos(6 * theta);
+  if (shape === 'octagon') return 1 + 0.1 * Math.cos(8 * theta);
   return 1;
 }
 
@@ -199,7 +211,7 @@ function renderBoard() {
   const sorted = [...runs].sort((a, b) => b.score - a.score || b.seconds - a.seconds).slice(0, 10);
   runListEl.innerHTML = sorted.map(run => `
     <li class="run-row">
-      <span>${run.mode.toUpperCase()}<small>NIVEL ${String(run.level).padStart(2, '0')} · #${run.attempt}</small></span>
+      <span>${(run.mode || 'CLÁSICO').toUpperCase()}<small>NIVEL ${String(run.level).padStart(2, '0')} · #${run.attempt}</small></span>
       <span>${run.score}</span>
       <span>${formatTime(run.seconds)}</span>
     </li>
@@ -287,7 +299,6 @@ function switchLane() {
   }
 }
 
-// Controladores de eventos e interfaz
 startButton.addEventListener('click', (e) => {
   e.preventDefault();
   e.stopPropagation();
@@ -308,7 +319,7 @@ document.querySelector('#close-board').addEventListener('click', (e) => {
 });
 
 shell.addEventListener('pointerdown', (e) => {
-  if (e.target.closest('button, #board, #overlay:not(.hidden)')) return;
+  if (e.target.closest('button, #board, #update-modal, #overlay:not(.hidden)')) return;
   if (mode === 'playing') {
     switchLane();
   } else if (mode === 'over') {
@@ -321,7 +332,7 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
     if (mode === 'playing') {
       switchLane();
-    } else {
+    } else if (mode === 'over') {
       begin();
     }
   }
@@ -347,7 +358,6 @@ function addPattern() {
 
   const roll = Math.random();
 
-  // Generación de Power-Ups en Modo Evolución
   if (selectedMode === 'evolution' && roll < 0.16) {
     const pTypes = ['shield', 'magnet', 'slow'];
     const pType = pTypes[Math.floor(Math.random() * pTypes.length)];
@@ -355,7 +365,6 @@ function addPattern() {
     return;
   }
 
-  // Obstáculos y Luces
   if (roll < 0.45) {
     add(0, laneChoice, 'hazard', selectedMode === 'evolution' && Math.random() < 0.35);
     add(0.24, otherLane, 'spark');
@@ -390,7 +399,6 @@ function update(dt) {
   const destRadius = rings[targetLane] || rings[0];
   currentRadius += (destRadius - currentRadius) * Math.min(1, dt * 18);
 
-  // Actualizar timers de Power-ups
   if (magnetTimer > 0) {
     magnetTimer -= dt;
     hudMagnet.hidden = false;
@@ -408,14 +416,12 @@ function update(dt) {
     const effectiveDt = dt * timeScale;
     elapsed += effectiveDt;
 
-    // Progresión de nivel
     const nextLevel = 1 + Math.max(Math.floor(score / 8), Math.floor(elapsed / 24));
     if (nextLevel > level) {
       level = nextLevel;
       resize();
     }
 
-    // Inversión de giro dinámica en Modo Evolución
     if (selectedMode === 'evolution' && level >= 3) {
       reverseTimer -= effectiveDt;
       if (reverseTimer <= 2 && reverseTimer > 0) {
@@ -441,19 +447,16 @@ function update(dt) {
     levelEl.textContent = 'NIVEL ' + String(level).padStart(2, '0');
     timerEl.textContent = formatTime(elapsed);
 
-    // Posición del jugador considerando forma de la órbita
     const playerR = currentRadius * getRadiusModifier(angle, shape);
     const playerX = cx + Math.cos(angle) * playerR;
     const playerY = cy + Math.sin(angle) * playerR;
 
-    // Rastro / Estela (Ghost trail)
     trail.unshift({ x: playerX, y: playerY, alpha: 1 });
     if (trail.length > 12) trail.pop();
 
     for (const obj of objects) {
       if (obj.hit) continue;
 
-      // Obstáculos móviles entre carriles
       if (obj.moving) {
         obj.ring += obj.moveDir * effectiveDt * 0.7;
         if (obj.ring >= rings.length - 1) { obj.ring = rings.length - 1; obj.moveDir = -1; }
@@ -465,7 +468,6 @@ function update(dt) {
       let objX = cx + Math.cos(obj.a) * objR;
       let objY = cy + Math.sin(obj.a) * objR;
 
-      // Efecto Imán
       if (magnetTimer > 0 && obj.type === 'spark') {
         const dx = playerX - objX;
         const dy = playerY - objY;
@@ -509,14 +511,12 @@ function update(dt) {
       }
     }
 
-    // Filtrar objetos lejanos
     objects = objects.filter(obj => {
       const diff = (obj.a - angle) * direction;
       return diff > -Math.PI * 0.6 && diff < Math.PI * 2.2 && !obj.hit;
     });
   }
 
-  // Partículas y estela
   particles = particles.filter(p => p.life > 0);
   for (const p of particles) {
     p.x += p.vx * dt;
@@ -540,7 +540,6 @@ function draw(time) {
     ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
   }
 
-  // Fondo estrellado
   for (const s of stars) {
     const twinkle = 0.75 + Math.sin(time * 0.002 + s.phase) * 0.25;
     ctx.globalAlpha = s.a * twinkle;
@@ -553,12 +552,10 @@ function draw(time) {
 
   const shape = getGeometryType();
 
-  // Dibujar órbitas
   for (let ringIdx = 0; ringIdx < rings.length; ringIdx++) {
     const baseR = rings[ringIdx];
     ctx.beginPath();
     
-    // Trazado poligonal/elíptico según la forma
     const steps = shape === 'circle' ? 64 : 72;
     for (let i = 0; i <= steps; i++) {
       const theta = (i / steps) * Math.PI * 2;
@@ -575,7 +572,6 @@ function draw(time) {
     ctx.stroke();
   }
 
-  // Objetos y coleccionables
   for (const obj of objects) {
     const baseR = rings[Math.round(obj.ring)] || rings[0];
     const r = baseR * getRadiusModifier(obj.a, shape);
@@ -608,7 +604,6 @@ function draw(time) {
       ctx.fill();
       ctx.restore();
     } else {
-      // Power-up icons
       ctx.save();
       ctx.font = '14px sans-serif';
       ctx.textAlign = 'center';
@@ -619,7 +614,6 @@ function draw(time) {
     }
   }
 
-  // Estela del jugador
   for (const t of trail) {
     ctx.globalAlpha = t.alpha * 0.35;
     ctx.fillStyle = '#6df7e8';
@@ -629,7 +623,6 @@ function draw(time) {
   }
   ctx.globalAlpha = 1;
 
-  // Jugador
   const playerR = currentRadius * getRadiusModifier(angle, shape);
   const px = cx + Math.cos(angle) * playerR;
   const py = cy + Math.sin(angle) * playerR;
@@ -656,7 +649,6 @@ function draw(time) {
   }
   ctx.restore();
 
-  // Partículas
   for (const p of particles) {
     ctx.globalAlpha = Math.max(0, p.life / p.max);
     ctx.fillStyle = p.color;
@@ -677,4 +669,6 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
+// Iniciar comprobación de actualizaciones tras cargar la vista
+checkUpdates();
 requestAnimationFrame(frame);
