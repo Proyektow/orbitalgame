@@ -9,13 +9,13 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%23090b18'/><ellipse cx='50' cy='50' rx='40' ry='18' fill='none' stroke='%23343958' stroke-width='3' transform='rotate(-28 50 50)'/><circle cx='50' cy='50' r='9' fill='%23ffffff'/><circle cx='80' cy='34' r='7' fill='%236df7e8'/><circle cx='20' cy='66' r='5' fill='%23ff5b87'/></svg>">
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%23090b18'/><ellipse cx='50' cy='50' rx='40' ry='18' fill='none' stroke='%23343958' stroke-width='3' transform='rotate(-28 50 50)'/><circle cx='50' cy='50' r='9' fill='%23ffffff'/><circle cx='80' cy='34' r='7' fill='%236df7e8'/><circle cx='20' cy='66' r='5' fill='%23ff5b87'/></svg>">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2.6.0">
 </head>
 <body>
   <main class="game-shell">
     <canvas id="game" aria-label="Juego Órbita"></canvas>
     
-    <!-- Barra superior de juego: solo activa en partida -->
+    <!-- Barra superior de juego: solo visible en partida activa -->
     <header class="topbar" id="game-topbar" aria-live="polite" hidden>
       <div class="score-wrap">
         <span class="eyebrow" id="score-label">PUNTOS</span>
@@ -68,8 +68,9 @@
       </div>
 
       <div class="wallet-badge" id="menu-photons">0 ✦ FOTONES</div>
+      <p class="eyebrow" id="eyebrow">UN JUEGO DE REFLEJOS</p>
       <h1 id="headline">Órbita</h1>
-      <p id="subline">Elige modalidad y despega.</p>
+      <p id="subline">Salta entre anillos.<br>Recoge luz. Esquiva las anomalías.</p>
 
       <div class="mode-selector">
         <span class="eyebrow">MODALIDAD</span>
@@ -99,16 +100,16 @@
       </div>
 
       <div class="menu-actions">
-        <button id="start" class="primary-btn" type="button">DESPEGAR <span>↗</span></button>
+        <button id="start" class="primary-btn" type="button">EMPEZAR <span>↗</span></button>
         <div class="sub-actions">
-          <button id="open-board" class="board-trigger" type="button">HISTORIAL</button>
+          <button id="open-board" class="board-trigger" type="button">VER HISTORIAL</button>
           <button id="open-shop" class="board-trigger shop-trigger" type="button">TIENDA ✦</button>
         </div>
       </div>
-      <small id="hint">ESPACIO O CLIC PARA JUGAR</small>
+      <small id="hint">TOCA EN CUALQUIER LUGAR PARA CAMBIAR DE ANILLO</small>
     </div>
 
-    <!-- Tienda de Skins y Paletas -->
+    <!-- Tienda -->
     <section id="shop-modal" class="modal-box" hidden>
       <div class="modal-head">
         <div>
@@ -130,17 +131,16 @@
     <section id="update-modal" class="modal-box" hidden>
       <div class="modal-head">
         <div>
-          <span class="eyebrow" id="update-tag">VERSIÓN 2.5.0</span>
-          <h2>¡Mega Actualización!</h2>
+          <span class="eyebrow" id="update-tag">VERSIÓN 2.6.0</span>
+          <h2>¡Actualizado!</h2>
         </div>
       </div>
       <div class="update-body">
         <ul id="update-list">
-          <li><strong>Nuevo Modo Pulso (Dash):</strong> Salta obstáculos geométricos al compás de la música.</li>
-          <li><strong>Controles Táctiles Reparados:</strong> Respuesta inmediata en seguimiento de dedo y joystick.</li>
-          <li><strong>Música Rítmica Synthwave:</strong> Sintetizador dinámico en tiempo real que reacciona a la partida.</li>
-          <li><strong>Tienda y Economía:</strong> Acumula fotones y desbloquea aspectos y temas.</li>
-          <li><strong>Game Feel:</strong> Números flotantes de puntuación y feedback háptico.</li>
+          <li><strong>Restauración Gráfica:</strong> Efectos de brillo de neón, canvas y texturas orbitales intactas.</li>
+          <li><strong>Crash Resuelto:</strong> La pantalla de colisión ahora devuelve al menú limpiamente sin congelarse.</li>
+          <li><strong>Tienda y Fotones:</strong> Recoge energía y personaliza nave y temas visuales.</li>
+          <li><strong>Modo Pulso (Dash):</strong> Salta obstáculos geométricos al ritmo del sintetizador.</li>
         </ul>
       </div>
       <label class="modal-check">
@@ -154,7 +154,7 @@
     <section id="board" class="board" aria-label="Tabla de intentos" hidden>
       <div class="board-head">
         <div>
-          <span class="eyebrow">HISTORIAL</span>
+          <span class="eyebrow">TU HISTORIAL</span>
           <h2>Récords</h2>
         </div>
         <button id="close-board" class="close-board" type="button" aria-label="Cerrar">×</button>
@@ -187,7 +187,7 @@
     <div id="reverse-banner" class="alert-banner">¡INVERSIÓN!</div>
   </main>
 
-  <script src="game.js"></script>
+  <script src="game.js?v=2.6.0"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
