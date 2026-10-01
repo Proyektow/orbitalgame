@@ -4,9 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#090b18">
-  <title>Órbita</title>
-  
-  <!-- Enlace al manifest para que el móvil lo reconozca como app -->
+  <title>Órbita Evolución</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -34,14 +32,38 @@
       <div id="streak" class="streak" aria-label="Racha"></div>
     </header>
 
+    <div class="powerup-hud" id="powerup-hud">
+      <div id="hud-shield" class="hud-item" hidden>🛡️ ESCUDO</div>
+      <div id="hud-magnet" class="hud-item" hidden>🧲 IMÁN</div>
+      <div id="hud-slow" class="hud-item" hidden>⏳ RELENTIZAR</div>
+    </div>
+
     <div class="center-ui" id="overlay">
       <div class="orbit-mark" aria-hidden="true"><i></i><b></b></div>
-      <p class="eyebrow" id="eyebrow">UN JUEGO DE REFLEJOS</p>
+      <p class="eyebrow" id="eyebrow">SISTEMA ORBITAL</p>
       <h1 id="headline">Órbita</h1>
-      <p id="subline">Salta entre anillos.<br>Recoge luz. Esquiva las anomalías.</p>
-      <button id="start" type="button">EMPEZAR <span>↗</span></button>
-      <button id="open-board" class="board-trigger" type="button">VER TABLA DE INTENTOS</button>
-      <small id="hint">TOCA EN CUALQUIER LUGAR O USA ESPACIO PARA CAMBIAR DE ANILLO</small>
+      <p id="subline">Selecciona tu modo de juego y despega.</p>
+
+      <div class="mode-selector">
+        <span class="eyebrow">MODO DE JUEGO</span>
+        <div class="btn-group" id="mode-group">
+          <button type="button" class="opt-btn active" data-mode="classic">CLÁSICO</button>
+          <button type="button" class="opt-btn" data-mode="evolution">EVOLUCIÓN</button>
+        </div>
+      </div>
+
+      <div class="diff-selector" id="diff-container" hidden>
+        <span class="eyebrow">DIFICULTAD INICIAL</span>
+        <div class="btn-group" id="diff-group">
+          <button type="button" class="opt-btn active" data-diff="easy">FÁCIL</button>
+          <button type="button" class="opt-btn" data-diff="normal">NORMAL</button>
+          <button type="button" class="opt-btn" data-diff="hard">EXTREMO</button>
+        </div>
+      </div>
+
+      <button id="start" class="primary-btn" type="button">DESPEGAR <span>↗</span></button>
+      <button id="open-board" class="board-trigger" type="button">VER HISTORIAL</button>
+      <small id="hint">TOCA PARA CAMBIAR DE ANILLO · ESPACIO O FLECHAS</small>
     </div>
 
     <section id="board" class="board" aria-label="Tabla de intentos" hidden>
@@ -53,7 +75,7 @@
         <button id="close-board" class="close-board" type="button" aria-label="Cerrar">×</button>
       </div>
       <div class="board-columns">
-        <span># / NIVEL</span>
+        <span>MODO / INTENTO</span>
         <span>PUNTOS</span>
         <span>TIEMPO</span>
       </div>
@@ -68,11 +90,10 @@
     </footer>
 
     <div id="flash" class="flash"></div>
+    <div id="reverse-banner" class="alert-banner">¡INVERSIÓN!</div>
   </main>
 
   <script src="game.js"></script>
-
-  <!-- Registro del instalador -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
