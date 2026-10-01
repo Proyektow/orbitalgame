@@ -1,5 +1,5 @@
-// CONTROL DE VERSIÓN: Subida a 2.3.0 con Modo Constelación y Selector de Controles
-const CURRENT_VERSION = '2.3.0';
+// CONTROL DE VERSIÓN: 2.3.1 (Arrastre fluido continuo y multitouch optimizado)
+const CURRENT_VERSION = '2.3.1';
 
 const canvas = document.querySelector('#game');
 const ctx = canvas.getContext('2d');
@@ -168,16 +168,22 @@ let slowTimer = 0;
 let objects = [], particles = [];
 
 // ==========================================
-// VARIABLES ESPECÍFICAS DE MODO CONSTELACIÓN
+// VARIABLES DE MODO CONSTELACIÓN
 // ==========================================
-const MAP_SIZE = 1800; // Tamaño del mundo abierto
+const MAP_SIZE = 1800;
 let playerSnake = null;
 let bots = [];
 let foodOrbs = [];
 let isBoosting = false;
 let pointerTarget = { x: 0, y: 0 };
+let isDraggingFollow = false;
+let followPointerId = null;
+
+// Variables Joystick
+let joyCenter = { x: 0, y: 0 };
+let joyActive = false;
+let joyPointerId = null;
 let joystickVec = { x: 0, y: 0 };
-let activeTouchId = null;
 
 // Persistencia
 let best = Number(localStorage.getItem('orbita-best') || 0);
@@ -259,7 +265,6 @@ function renderBoard() {
   emptyBoardEl.hidden = sorted.length > 0;
 }
 
-// Inicialización de serpiente
 function createSnake(x, y, color, isPlayer = false) {
   const segments = [];
   for (let i = 0; i < 18; i++) {
@@ -299,13 +304,14 @@ function begin() {
     statusEl.textContent = 'SUPERVIVENCIA ESTELAR';
     streakEl.style.display = 'none';
 
-    // Mostrar controles de Constelación
     constControls.hidden = false;
     joystickZone.style.display = (selectedControl === 'joystick') ? 'block' : 'none';
 
-    // Iniciar jugador y bots
     playerSnake = createSnake(MAP_SIZE / 2, MAP_SIZE / 2, '#6df7e8', true);
     pointerTarget = { x: playerSnake.x + 100, y: playerSnake.y };
+    isDraggingFollow = false;
+    followPointerId = null;
+
     bots = [];
     const botColors = ['#ff5b87', '#bd93f9', '#fdd835', '#ff9a3c', '#50fa7b'];
     for (let i = 0; i < 5; i++) {
@@ -314,7 +320,6 @@ function begin() {
       bots.push(createSnake(bx, by, botColors[i % botColors.length], false));
     }
 
-    // Comida inicial
     foodOrbs = [];
     for (let i = 0; i < 90; i++) {
       foodOrbs.push({
@@ -326,7 +331,6 @@ function begin() {
     }
 
   } else {
-    // Modos Clásico y Evolución
     scoreLabelEl.textContent = 'PUNTOS';
     streakEl.style.display = 'flex';
     constControls.hidden = true;
@@ -362,6 +366,9 @@ function finish() {
   playSound('hit');
   vibrate([80, 50, 120]);
   constControls.hidden = true;
+  isDraggingFollow = false;
+  joyActive = false;
+  isBoosting = false;
 
   flashEl.classList.remove('hit');
   void flashEl.offsetWidth;
@@ -397,7 +404,7 @@ function switchLane() {
   }
 }
 
-// Botones y enlaces
+// Botones y enlaces del menú
 startButton.addEventListener('click', (e) => {
   e.preventDefault();
   e.stopPropagation();
@@ -417,73 +424,88 @@ document.querySelector('#close-board').addEventListener('click', (e) => {
   boardEl.hidden = true;
 });
 
-// Manejadores de Joystick virtual
-let joyCenter = { x: 0, y: 0 };
-let joyActive = false;
+// ========================================================
+// SISTEMA DE ARRASTRE CONTINUO MEJORADO (POINTER EVENTS)
+// ========================================================
 
-joystickZone.addEventListener('pointerdown', (e) => {
-  e.stopPropagation();
-  joyActive = true;
-  const rect = joystickZone.getBoundingClientRect();
-  joyCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-  updateJoystick(e.clientX, e.clientY);
-});
-
-window.addEventListener('pointermove', (e) => {
-  if (joyActive) {
-    updateJoystick(e.clientX, e.clientY);
-  } else if (mode === 'playing' && selectedMode === 'constellation' && selectedControl === 'follow') {
-    // Si sigue el dedo, calcular objetivo en espacio de mundo respecto a la cámara
-    if (playerSnake) {
-      const screenDx = e.clientX - w / 2;
-      const screenDy = e.clientY - h / 2;
-      pointerTarget = { x: playerSnake.x + screenDx, y: playerSnake.y + screenDy };
-    }
-  }
-});
-
-window.addEventListener('pointerup', () => {
-  if (joyActive) {
-    joyActive = false;
-    joystickKnob.style.transform = `translate(0px, 0px)`;
-    joystickVec = { x: 0, y: 0 };
-  }
-});
+function updateFollowTarget(clientX, clientY) {
+  if (!playerSnake) return;
+  const screenDx = clientX - w / 2;
+  const screenDy = clientY - h / 2;
+  pointerTarget = { x: playerSnake.x + screenDx, y: playerSnake.y + screenDy };
+}
 
 function updateJoystick(px, py) {
   const dx = px - joyCenter.x;
   const dy = py - joyCenter.y;
   const dist = Math.hypot(dx, dy);
   const maxR = 40;
-  const angle = Math.atan2(dy, dx);
+  const ang = Math.atan2(dy, dx);
   const clampedDist = Math.min(dist, maxR);
 
-  joystickKnob.style.transform = `translate(${Math.cos(angle) * clampedDist}px, ${Math.sin(angle) * clampedDist}px)`;
-  if (dist > 6) {
-    joystickVec = { x: Math.cos(angle), y: Math.sin(angle) };
+  joystickKnob.style.transform = `translate(${Math.cos(ang) * clampedDist}px, ${Math.sin(ang) * clampedDist}px)`;
+  if (dist > 5) {
+    joystickVec = { x: Math.cos(ang), y: Math.sin(ang) };
+  } else {
+    joystickVec = { x: 0, y: 0 };
   }
 }
 
-// Botón de Turbo
-boostBtn.addEventListener('pointerdown', (e) => {
+// 1. Control del Joystick virtual (con captura de arrastre)
+joystickZone.addEventListener('pointerdown', (e) => {
+  e.stopPropagation();
+  joyActive = true;
+  joyPointerId = e.pointerId;
+  joystickZone.setPointerCapture(e.pointerId);
+
+  const rect = joystickZone.getBoundingClientRect();
+  joyCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  updateJoystick(e.clientX, e.clientY);
+});
+
+joystickZone.addEventListener('pointermove', (e) => {
+  if (joyActive && e.pointerId === joyPointerId) {
+    updateJoystick(e.clientX, e.clientY);
+  }
+});
+
+const endJoystick = (e) => {
+  if (joyActive && e.pointerId === joyPointerId) {
+    joyActive = false;
+    joyPointerId = null;
+    joystickKnob.style.transform = `translate(0px, 0px)`;
+    joystickVec = { x: 0, y: 0 };
+  }
+};
+joystickZone.addEventListener('pointerup', endJoystick);
+joystickZone.addEventListener('pointercancel', endJoystick);
+
+// 2. Control del Turbo
+const startBoost = (e) => {
   e.stopPropagation();
   isBoosting = true;
   boostBtn.classList.add('active');
-});
-window.addEventListener('pointerup', () => {
+};
+const endBoost = (e) => {
+  e.stopPropagation();
   isBoosting = false;
   boostBtn.classList.remove('active');
-});
+};
+boostBtn.addEventListener('pointerdown', startBoost);
+boostBtn.addEventListener('pointerup', endBoost);
+boostBtn.addEventListener('pointercancel', endBoost);
 
-// Toque en pantalla general
+// 3. Arrastre de la pantalla (Seguimiento de dedo y cambio de carril)
 shell.addEventListener('pointerdown', (e) => {
   if (e.target.closest('button, #board, #update-modal, #overlay:not(.hidden), .const-controls')) return;
+
   if (mode === 'playing') {
     if (selectedMode === 'constellation') {
-      if (selectedControl === 'follow' && playerSnake) {
-        const screenDx = e.clientX - w / 2;
-        const screenDy = e.clientY - h / 2;
-        pointerTarget = { x: playerSnake.x + screenDx, y: playerSnake.y + screenDy };
+      if (selectedControl === 'follow') {
+        isDraggingFollow = true;
+        followPointerId = e.pointerId;
+        shell.setPointerCapture(e.pointerId);
+        updateFollowTarget(e.clientX, e.clientY);
       }
     } else {
       switchLane();
@@ -492,6 +514,26 @@ shell.addEventListener('pointerdown', (e) => {
     begin();
   }
 });
+
+shell.addEventListener('pointermove', (e) => {
+  if (mode === 'playing' && selectedMode === 'constellation' && selectedControl === 'follow') {
+    if (isDraggingFollow && e.pointerId === followPointerId) {
+      updateFollowTarget(e.clientX, e.clientY);
+    } else if (e.pointerType === 'mouse') {
+      // Movimiento continuo con ratón en PC
+      updateFollowTarget(e.clientX, e.clientY);
+    }
+  }
+});
+
+const endFollowDrag = (e) => {
+  if (isDraggingFollow && e.pointerId === followPointerId) {
+    isDraggingFollow = false;
+    followPointerId = null;
+  }
+};
+shell.addEventListener('pointerup', endFollowDrag);
+shell.addEventListener('pointercancel', endFollowDrag);
 
 // Teclado
 window.addEventListener('keydown', (e) => {
@@ -573,13 +615,11 @@ function burst(x, y, color, count = 12) {
   }
 }
 
-// Actualización de serpiente
 function updateSnake(snake, dt) {
   if (!snake.alive) return;
 
   const currentSpeed = (snake.isPlayer && isBoosting && snake.length > 8) ? snake.speed * 1.9 : snake.speed;
 
-  // Lógica de dirección del jugador
   if (snake.isPlayer) {
     if (selectedControl === 'joystick' && (joystickVec.x !== 0 || joystickVec.y !== 0)) {
       snake.targetAngle = Math.atan2(joystickVec.y, joystickVec.x);
@@ -591,7 +631,6 @@ function updateSnake(snake, dt) {
       }
     }
   } else {
-    // IA sencilla para bots: buscar comida más cercana
     let closest = null;
     let minDist = 300;
     for (const f of foodOrbs) {
@@ -608,17 +647,14 @@ function updateSnake(snake, dt) {
     }
   }
 
-  // Rotación suave
   let diff = snake.targetAngle - snake.angle;
   while (diff < -Math.PI) diff += Math.PI * 2;
   while (diff > Math.PI) diff -= Math.PI * 2;
-  snake.angle += diff * Math.min(1, dt * 7);
+  snake.angle += diff * Math.min(1, dt * 7.5);
 
-  // Mover cabeza
   snake.x += Math.cos(snake.angle) * currentSpeed * dt;
   snake.y += Math.sin(snake.angle) * currentSpeed * dt;
 
-  // Muros de arena
   if (snake.x < 10 || snake.x > MAP_SIZE - 10 || snake.y < 10 || snake.y > MAP_SIZE - 10) {
     if (snake.isPlayer) {
       finish();
@@ -629,7 +665,6 @@ function updateSnake(snake, dt) {
     }
   }
 
-  // Turbo: soltar orbes y restar longitud
   if (snake.isPlayer && isBoosting && snake.length > 8) {
     snake.boostClock += dt;
     if (snake.boostClock > 0.12) {
@@ -640,8 +675,6 @@ function updateSnake(snake, dt) {
     }
   }
 
-  // Seguir segmentos del cuerpo
-  const targetDist = 7;
   snake.segments.unshift({ x: snake.x, y: snake.y });
   while (snake.segments.length > Math.floor(snake.length)) {
     snake.segments.pop();
@@ -651,7 +684,6 @@ function updateSnake(snake, dt) {
 function killSnake(snake) {
   snake.alive = false;
   burst(snake.x, snake.y, snake.color, 25);
-  // Transformar su cuerpo en comida
   for (let i = 0; i < snake.segments.length; i += 2) {
     foodOrbs.push({
       x: snake.segments[i].x + (Math.random() - 0.5) * 10,
@@ -660,7 +692,6 @@ function killSnake(snake) {
       color: snake.color
     });
   }
-  // Reaparecer bot después de 3 segundos
   if (!snake.isPlayer) {
     setTimeout(() => {
       if (mode === 'playing' && selectedMode === 'constellation') {
@@ -686,9 +717,6 @@ function update(dt) {
   elapsed += dt;
   timerEl.textContent = formatTime(elapsed);
 
-  // ===================================
-  // LÓGICA MODO CONSTELACIÓN (SLITHER)
-  // ===================================
   if (selectedMode === 'constellation') {
     updateSnake(playerSnake, dt);
     score = Math.floor(playerSnake.length * 10);
@@ -697,7 +725,6 @@ function update(dt) {
     for (const b of bots) updateSnake(b, dt);
     bots = bots.filter(b => b.alive);
 
-    // Comer orbes de luz
     for (let i = foodOrbs.length - 1; i >= 0; i--) {
       const f = foodOrbs[i];
       const d = Math.hypot(playerSnake.x - f.x, playerSnake.y - f.y);
@@ -708,7 +735,6 @@ function update(dt) {
         vibrate(15);
         continue;
       }
-      // Bots comiendo
       for (const b of bots) {
         if (Math.hypot(b.x - f.x, b.y - f.y) < 16) {
           b.length += 0.6;
@@ -718,7 +744,6 @@ function update(dt) {
       }
     }
 
-    // Reposición de comida continua en la arena
     while (foodOrbs.length < 90) {
       foodOrbs.push({
         x: Math.random() * MAP_SIZE,
@@ -728,8 +753,6 @@ function update(dt) {
       });
     }
 
-    // Detección de colisiones cuerpo a cuerpo
-    // 1. ¿Choca la cabeza del jugador contra el cuerpo de un bot?
     for (const b of bots) {
       for (let i = 2; i < b.segments.length; i++) {
         const seg = b.segments[i];
@@ -740,7 +763,6 @@ function update(dt) {
       }
     }
 
-    // 2. ¿Choca la cabeza de un bot contra el cuerpo del jugador?
     for (const b of bots) {
       for (let i = 2; i < playerSnake.segments.length; i++) {
         const seg = playerSnake.segments[i];
@@ -756,9 +778,6 @@ function update(dt) {
     return;
   }
 
-  // ===================================
-  // LÓGICA MODOS CLÁSICO Y EVOLUCIÓN
-  // ===================================
   const shape = getGeometryType();
   const destRadius = rings[targetLane] || rings[0];
   currentRadius += (destRadius - currentRadius) * Math.min(1, dt * 18);
@@ -899,23 +918,17 @@ function draw(time) {
     ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
   }
 
-  // ============================================
-  // RENDERIZADO MODO CONSTELACIÓN (CAMARA LIBRE)
-  // ============================================
   if (selectedMode === 'constellation' && playerSnake) {
-    // Desplazamiento de cámara centrado en el jugador
     const camX = w / 2 - playerSnake.x;
     const camY = h / 2 - playerSnake.y;
 
     ctx.save();
     ctx.translate(camX, camY);
 
-    // Borde de la arena
     ctx.strokeStyle = 'rgba(255, 91, 135, 0.4)';
     ctx.lineWidth = 4;
     ctx.strokeRect(0, 0, MAP_SIZE, MAP_SIZE);
 
-    // Cuadrícula estelar suave
     ctx.strokeStyle = 'rgba(40, 48, 86, 0.25)';
     ctx.lineWidth = 1;
     for (let x = 0; x < MAP_SIZE; x += 100) {
@@ -925,7 +938,6 @@ function draw(time) {
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(MAP_SIZE, y); ctx.stroke();
     }
 
-    // Comida estelar
     for (const f of foodOrbs) {
       ctx.fillStyle = f.color;
       ctx.shadowBlur = 8;
@@ -935,11 +947,9 @@ function draw(time) {
       ctx.fill();
     }
 
-    // Dibujar serpientes (Bots + Jugador)
     const allSnakes = [...bots, playerSnake];
     for (const s of allSnakes) {
       if (!s.alive) continue;
-      // Cuerpo
       ctx.shadowBlur = 12;
       ctx.shadowColor = s.color;
       ctx.fillStyle = s.color;
@@ -950,7 +960,6 @@ function draw(time) {
         ctx.arc(seg.x, seg.y, segR, 0, Math.PI * 2);
         ctx.fill();
       }
-      // Cabeza
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.arc(s.x, s.y, 7, 0, Math.PI * 2);
@@ -962,9 +971,6 @@ function draw(time) {
     return;
   }
 
-  // ============================================
-  // RENDERIZADO MODOS ORBITALES (CLÁSICO/EVOLUCIÓN)
-  // ============================================
   for (const s of stars) {
     const twinkle = 0.75 + Math.sin(time * 0.002 + s.phase) * 0.25;
     ctx.globalAlpha = s.a * twinkle;
