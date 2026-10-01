@@ -1,5 +1,5 @@
-// CONTROL DE VERSIÓN: 2.6.0 (Restauración visual fiel y corrección del crash en muerte)
-const CURRENT_VERSION = '2.6.0';
+// CONTROL DE VERSIÓN: 2.7.0 (Pausa/Salir, Físicas reales Geometry Dash y Bots Inteligentes Slither)
+const CURRENT_VERSION = '2.7.0';
 
 const canvas = document.querySelector('#game');
 const ctx = canvas.getContext('2d');
@@ -16,6 +16,11 @@ const timerEl = document.querySelector('#timer');
 const hudPhotonsEl = document.querySelector('#hud-photons');
 const menuPhotonsEl = document.querySelector('#menu-photons');
 const shopPhotonsEl = document.querySelector('#shop-photons');
+
+const pauseBtn = document.querySelector('#pause-btn');
+const pauseModal = document.querySelector('#pause-modal');
+const resumeBtn = document.querySelector('#resume-btn');
+const quitBtn = document.querySelector('#quit-btn');
 
 const boardEl = document.querySelector('#board');
 const runListEl = document.querySelector('#run-list');
@@ -113,11 +118,19 @@ function playSound(type) {
     if (type === 'switch' || type === 'jump') {
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(320, now);
-      osc.frequency.exponentialRampToValueAtTime(640, now + 0.08);
-      gain.gain.setValueAtTime(0.09, now);
+      osc.frequency.exponentialRampToValueAtTime(680, now + 0.08);
+      gain.gain.setValueAtTime(0.1, now);
       gain.gain.linearRampToValueAtTime(0.001, now + 0.08);
       osc.start(now);
       osc.stop(now + 0.08);
+    } else if (type === 'orb') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(659.25, now);
+      osc.frequency.exponentialRampToValueAtTime(987.77, now + 0.12);
+      gain.gain.setValueAtTime(0.14, now);
+      gain.gain.linearRampToValueAtTime(0.001, now + 0.12);
+      osc.start(now);
+      osc.stop(now + 0.12);
     } else if (type === 'collect') {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(587.33, now);
@@ -254,7 +267,7 @@ let activeFilter = 'all';
 
 let w = 0, h = 0, dpr = 1, cx = 0, cy = 0;
 let rings = [];
-let mode = 'ready'; 
+let mode = 'ready'; // 'ready', 'playing', 'paused', 'over'
 let angle = -Math.PI / 2;
 let targetLane = 0;
 let currentRadius = 0; 
@@ -279,14 +292,19 @@ let joyActive = false;
 let joyCenter = { x: 0, y: 0 };
 let joyPointerId = null;
 
-// Modo Pulso
+// ==========================================
+// MODO PULSO (GEOMETRY DASH PRO ENGINE)
+// ==========================================
 let pulseY = 0;
 let pulseVy = 0;
-let pulseGravity = 1200;
+let pulseRotation = 0;
+let pulseGravity = 1750;
 let pulseFloor = 0;
 let pulseCeil = 0;
 let pulseObstacles = [];
-let pulseSpeed = 290;
+let pulseSpeed = 330;
+let jumpBuffered = false;
+let jumpBufferTimer = 0;
 
 // Persistencia
 let best = Number(localStorage.getItem('orbita-best') || 0);
@@ -417,18 +435,20 @@ function renderBoard() {
 
 function createSnake(x, y, color, isPlayer = false) {
   const segments = [];
-  for (let i = 0; i < 18; i++) segments.push({ x: x - i * 8, y });
+  for (let i = 0; i < 22; i++) segments.push({ x: x - i * 7, y });
   return {
     x, y,
     angle: isPlayer ? 0 : Math.random() * Math.PI * 2,
-    speed: 135,
-    targetAngle: 0,
+    speed: 140,
+    targetAngle: isPlayer ? 0 : Math.random() * Math.PI * 2,
     segments,
-    length: 18,
+    length: 22,
     color,
     isPlayer,
     alive: true,
-    boostClock: 0
+    boostClock: 0,
+    aiTimer: Math.random() * 0.5,
+    isBoosting: false
   };
 }
 
@@ -448,6 +468,7 @@ function begin() {
   gameTopBar.hidden = false;
   boardEl.hidden = true;
   shopModal.hidden = true;
+  pauseModal.hidden = true;
   overlay.classList.add('hidden');
 
   if (selectedMode === 'constellation') {
@@ -463,10 +484,10 @@ function begin() {
     bots = [];
     const botColors = ['#ff5b87', '#bd93f9', '#fdd835', '#ff9a3c', '#50fa7b'];
     for (let i = 0; i < 5; i++) {
-      bots.push(createSnake(Math.random() * (MAP_SIZE - 200) + 100, Math.random() * (MAP_SIZE - 200) + 100, botColors[i], false));
+      bots.push(createSnake(Math.random() * (MAP_SIZE - 300) + 150, Math.random() * (MAP_SIZE - 300) + 150, botColors[i], false));
     }
     foodOrbs = [];
-    for (let i = 0; i < 90; i++) {
+    for (let i = 0; i < 95; i++) {
       foodOrbs.push({ x: Math.random() * MAP_SIZE, y: Math.random() * MAP_SIZE, r: 2.5 + Math.random() * 2.5, color: Math.random() < 0.6 ? '#6df7e8' : '#ff5b87' });
     }
 
@@ -479,8 +500,12 @@ function begin() {
 
     pulseY = pulseFloor - 12;
     pulseVy = 0;
+    pulseRotation = 0;
+    pulseGravity = 1750;
     pulseObstacles = [];
-    spawnClock = 1;
+    spawnClock = 0.8;
+    jumpBuffered = false;
+    jumpBufferTimer = 0;
 
   } else {
     scoreLabelEl.textContent = 'PUNTOS';
@@ -508,6 +533,36 @@ function begin() {
     statusEl.textContent = 'SISTEMA ACTIVO';
   }
 }
+
+// ==========================================
+// PAUSA Y SALIR
+// ==========================================
+function togglePause() {
+  if (mode === 'playing') {
+    mode = 'paused';
+    stopMusic();
+    pauseModal.hidden = false;
+  } else if (mode === 'paused') {
+    mode = 'playing';
+    startMusic();
+    pauseModal.hidden = true;
+  }
+}
+
+function quitToMenu() {
+  mode = 'ready';
+  stopMusic();
+  pauseModal.hidden = true;
+  gameTopBar.hidden = true;
+  constControls.hidden = true;
+  joyActive = false;
+  isBoosting = false;
+  overlay.classList.remove('hidden');
+}
+
+pauseBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePause(); });
+resumeBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePause(); });
+quitBtn.addEventListener('click', (e) => { e.stopPropagation(); quitToMenu(); });
 
 function finish() {
   if (mode !== 'playing') return;
@@ -548,9 +603,9 @@ function finish() {
   overlay.classList.remove('hidden');
 }
 
-// ========================================================
+// ==========================================
 // CONTROLES Y JOYSTICK
-// ========================================================
+// ==========================================
 function handleTouchDirection(clientX, clientY) {
   if (!playerSnake || mode !== 'playing') return;
   const rect = canvas.getBoundingClientRect();
@@ -606,18 +661,54 @@ const endBoost = () => { isBoosting = false; boostBtn.classList.remove('active')
 boostBtn.addEventListener('pointerup', endBoost);
 boostBtn.addEventListener('pointercancel', endBoost);
 
+function executeJump() {
+  if (selectedMode !== 'pulse' || mode !== 'playing') return;
+  const playerX = w * 0.25;
+
+  // 1. Revisar si estamos en radio de un Orbe de Salto Amarillo
+  for (const ob of pulseObstacles) {
+    if (ob.type === 'orb' && Math.hypot(ob.x - playerX, ob.y - pulseY) < 32 && !ob.used) {
+      ob.used = true;
+      pulseVy = pulseGravity > 0 ? -520 : 520;
+      playSound('orb');
+      vibrate(30);
+      burst(ob.x, ob.y, '#fdd835', 12);
+      spawnFloatText('¡ORBE!', ob.x, ob.y, '#fdd835');
+      return;
+    }
+  }
+
+  // 2. Salto normal sobre suelo, techo o plataforma
+  const onFloor = Math.abs(pulseY - (pulseFloor - 12)) < 4;
+  const onCeil = Math.abs(pulseY - (pulseCeil + 12)) < 4;
+  let onBlock = false;
+
+  for (const ob of pulseObstacles) {
+    if (ob.type === 'block' && Math.abs(ob.x - playerX) < (ob.w / 2 + 10)) {
+      if (pulseGravity > 0 && Math.abs(pulseY - (ob.y - ob.h / 2 - 12)) < 4) onBlock = true;
+      if (pulseGravity < 0 && Math.abs(pulseY - (ob.y + ob.h / 2 + 12)) < 4) onBlock = true;
+    }
+  }
+
+  if (onFloor || onCeil || onBlock) {
+    pulseVy = pulseGravity > 0 ? -500 : 500;
+    playSound('jump');
+    vibrate(20);
+  } else {
+    // Input Buffer de 0.12 segundos
+    jumpBuffered = true;
+    jumpBufferTimer = 0.12;
+  }
+}
+
 shell.addEventListener('pointerdown', (e) => {
-  if (e.target.closest('button, #board, #shop-modal, #update-modal, #overlay:not(.hidden), .const-controls')) return;
+  if (e.target.closest('button, #board, #shop-modal, #update-modal, #pause-modal, #overlay:not(.hidden), .const-controls')) return;
 
   if (mode === 'playing') {
     if (selectedMode === 'constellation') {
       if (selectedControl === 'follow') handleTouchDirection(e.clientX, e.clientY);
     } else if (selectedMode === 'pulse') {
-      if (Math.abs(pulseY - (pulseFloor - 12)) < 4 || Math.abs(pulseY - (pulseCeil + 12)) < 4) {
-        pulseVy = pulseGravity > 0 ? -480 : 480;
-        playSound('jump');
-        vibrate(20);
-      }
+      executeJump();
     } else {
       targetLane = 1 - targetLane;
       playSound('switch');
@@ -635,16 +726,18 @@ shell.addEventListener('pointermove', (e) => {
 });
 
 window.addEventListener('keydown', (e) => {
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    e.preventDefault();
+    if (mode === 'playing' || mode === 'paused') togglePause();
+    return;
+  }
   if (['Space', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyS'].includes(e.code)) {
     e.preventDefault();
     if (mode === 'playing') {
       if (selectedMode === 'constellation') {
         if (e.code === 'Space') isBoosting = true;
       } else if (selectedMode === 'pulse') {
-        if (Math.abs(pulseY - (pulseFloor - 12)) < 4 || Math.abs(pulseY - (pulseCeil + 12)) < 4) {
-          pulseVy = pulseGravity > 0 ? -480 : 480;
-          playSound('jump');
-        }
+        executeJump();
       } else {
         targetLane = 1 - targetLane;
         playSound('switch');
@@ -701,39 +794,115 @@ function update(dt) {
   floatTexts = floatTexts.filter(ft => ft.alpha > 0);
 
   // ----------------------------------------
-  // MODO PULSO (DASH)
+  // MODO PULSO (GEOMETRY DASH PRO ENGINE)
   // ----------------------------------------
   if (selectedMode === 'pulse') {
+    if (jumpBuffered) {
+      jumpBufferTimer -= dt;
+      if (jumpBufferTimer <= 0) jumpBuffered = false;
+    }
+
     pulseVy += pulseGravity * dt;
     pulseY += pulseVy * dt;
 
-    if (pulseY >= pulseFloor - 12) { pulseY = pulseFloor - 12; pulseVy = 0; }
-    if (pulseY <= pulseCeil + 12) { pulseY = pulseCeil + 12; pulseVy = 0; }
+    const playerX = w * 0.25;
+    let grounded = false;
 
-    score += Math.floor(dt * 30);
-    scoreEl.textContent = score;
-
-    spawnClock -= dt;
-    if (spawnClock <= 0) {
-      const type = Math.random() < 0.65 ? 'spike' : 'portal';
-      pulseObstacles.push({ x: w + 40, type, passed: false });
-      spawnClock = 1.05 + Math.random() * 0.7;
+    // Colisión Suelo y Techo
+    if (pulseGravity > 0 && pulseY >= pulseFloor - 12) {
+      pulseY = pulseFloor - 12;
+      pulseVy = 0;
+      grounded = true;
+    } else if (pulseGravity < 0 && pulseY <= pulseCeil + 12) {
+      pulseY = pulseCeil + 12;
+      pulseVy = 0;
+      grounded = true;
     }
 
-    const playerX = w * 0.25;
+    // Colisión con Plataformas / Bloques
+    for (const ob of pulseObstacles) {
+      if (ob.type === 'block') {
+        const hx = ob.w / 2;
+        const hy = ob.h / 2;
+        const dx = Math.abs(ob.x - playerX);
+        const dy = Math.abs(ob.y - pulseY);
+
+        if (dx < hx + 11 && dy < hy + 11) {
+          // Si cae encima de la plataforma
+          if (pulseGravity > 0 && pulseVy >= 0 && pulseY <= ob.y - hy + 8) {
+            pulseY = ob.y - hy - 12;
+            pulseVy = 0;
+            grounded = true;
+          } else if (pulseGravity < 0 && pulseVy <= 0 && pulseY >= ob.y + hy - 8) {
+            pulseY = ob.y + hy + 12;
+            pulseVy = 0;
+            grounded = true;
+          } else if (dx < hx + 8) {
+            // Impacto frontal con el bloque
+            burst(playerX, pulseY, '#ff5b87', 20);
+            finish();
+            return;
+          }
+        }
+      }
+    }
+
+    // Rotación del cubo estilo Geometry Dash
+    if (!grounded) {
+      const rotDir = pulseGravity > 0 ? 1 : -1;
+      pulseRotation += rotDir * 8.5 * dt;
+    } else {
+      // Ajustar al múltiplo de 90 grados más cercano
+      const targetSnap = Math.round(pulseRotation / (Math.PI / 2)) * (Math.PI / 2);
+      pulseRotation += (targetSnap - pulseRotation) * Math.min(1, dt * 25);
+
+      if (jumpBuffered) {
+        jumpBuffered = false;
+        executeJump();
+      }
+    }
+
+    score += Math.floor(dt * 35);
+    scoreEl.textContent = score;
+
+    // Generador estructurado de patrones de Geometry Dash
+    spawnClock -= dt;
+    if (spawnClock <= 0) {
+      const rand = Math.random();
+      if (rand < 0.45) {
+        // Pincho simple en suelo
+        pulseObstacles.push({ x: w + 40, type: 'spike', passed: false });
+        spawnClock = 0.95 + Math.random() * 0.4;
+      } else if (rand < 0.70) {
+        // Bloque elevado con orbe de salto
+        const blockY = pulseFloor - 48;
+        pulseObstacles.push({ x: w + 40, type: 'block', w: 42, h: 26, y: blockY, passed: false });
+        pulseObstacles.push({ x: w + 110, type: 'orb', y: blockY - 32, used: false, passed: false });
+        pulseObstacles.push({ x: w + 180, type: 'spike', passed: false });
+        spawnClock = 1.6;
+      } else {
+        // Portal de gravedad
+        pulseObstacles.push({ x: w + 40, type: 'portal', passed: false });
+        spawnClock = 1.3;
+      }
+    }
+
+    // Movimiento y colisión de obstáculos
     for (const ob of pulseObstacles) {
       ob.x -= pulseSpeed * dt;
+
       if (ob.type === 'spike') {
-        if (Math.abs(ob.x - playerX) < 16 && pulseY > pulseFloor - 26) {
-          burst(playerX, pulseY, '#ff5b87', 18);
+        // Hitbox reducida y justa (estilo GD)
+        if (Math.abs(ob.x - playerX) < 11 && pulseY > pulseFloor - 24) {
+          burst(playerX, pulseY, '#ff5b87', 20);
           finish();
           break;
         }
       } else if (ob.type === 'portal') {
-        if (Math.abs(ob.x - playerX) < 20 && !ob.passed) {
+        if (Math.abs(ob.x - playerX) < 18 && !ob.passed) {
           ob.passed = true;
           pulseGravity *= -1;
-          playSound('collect');
+          playSound('orb');
           spawnFloatText('¡GRAVEDAD!', playerX, pulseY, '#bd93f9');
           vibrate(40);
         }
@@ -745,12 +914,13 @@ function update(dt) {
         updateWalletUI();
       }
     }
-    pulseObstacles = pulseObstacles.filter(ob => ob.x > -50);
+
+    pulseObstacles = pulseObstacles.filter(ob => ob.x > -80);
     return;
   }
 
   // ----------------------------------------
-  // MODO CONSTELACIÓN
+  // MODO CONSTELACIÓN (SLITHER.IO MEJORADO)
   // ----------------------------------------
   if (selectedMode === 'constellation') {
     if (selectedControl === 'joystick' && (joystickVec.x !== 0 || joystickVec.y !== 0)) {
@@ -760,12 +930,17 @@ function update(dt) {
     score = Math.floor(playerSnake.length * 10);
     scoreEl.textContent = score;
 
-    for (const b of bots) updateSnake(b, dt);
+    // Actualizar y dotar de IA inteligente a los bots
+    for (const b of bots) {
+      updateBotAI(b, dt);
+      updateSnake(b, dt);
+    }
     bots = bots.filter(b => b.alive);
 
+    // Comer orbes de luz
     for (let i = foodOrbs.length - 1; i >= 0; i--) {
       const f = foodOrbs[i];
-      if (Math.hypot(playerSnake.x - f.x, playerSnake.y - f.y) < 16) {
+      if (Math.hypot(playerSnake.x - f.x, playerSnake.y - f.y) < 18) {
         playerSnake.length += 0.8;
         foodOrbs.splice(i, 1);
         photons += 1;
@@ -775,7 +950,7 @@ function update(dt) {
         continue;
       }
       for (const b of bots) {
-        if (Math.hypot(b.x - f.x, b.y - f.y) < 16) {
+        if (Math.hypot(b.x - f.x, b.y - f.y) < 18) {
           b.length += 0.6;
           foodOrbs.splice(i, 1);
           break;
@@ -783,29 +958,44 @@ function update(dt) {
       }
     }
 
-    while (foodOrbs.length < 90) {
+    while (foodOrbs.length < 95) {
       foodOrbs.push({ x: Math.random() * MAP_SIZE, y: Math.random() * MAP_SIZE, r: 2.5 + Math.random() * 2.5, color: Math.random() < 0.6 ? '#6df7e8' : '#ff5b87' });
     }
 
+    // Colisiones cuerpo a cuerpo
     for (const b of bots) {
-      for (let i = 2; i < b.segments.length; i++) {
-        if (Math.hypot(playerSnake.x - b.segments[i].x, playerSnake.y - b.segments[i].y) < 10) {
-          burst(playerSnake.x, playerSnake.y, '#ff5b87', 20);
+      // 1. ¿Choca el jugador con el cuerpo del bot?
+      for (let i = 3; i < b.segments.length; i++) {
+        if (Math.hypot(playerSnake.x - b.segments[i].x, playerSnake.y - b.segments[i].y) < 11) {
+          burst(playerSnake.x, playerSnake.y, '#ff5b87', 22);
           finish();
           return;
         }
       }
-      for (let i = 2; i < playerSnake.segments.length; i++) {
-        if (Math.hypot(b.x - playerSnake.segments[i].x, b.y - playerSnake.segments[i].y) < 10) {
+      // 2. ¿Choca la cabeza del bot con el cuerpo del jugador?
+      for (let i = 3; i < playerSnake.segments.length; i++) {
+        if (Math.hypot(b.x - playerSnake.segments[i].x, b.y - playerSnake.segments[i].y) < 11) {
           b.alive = false;
-          photons += 10;
-          spawnFloatText('+10 ✦', b.x, b.y, '#fdd835');
+          burst(b.x, b.y, b.color, 24);
+          photons += 12;
+          spawnFloatText('+12 ✦', b.x, b.y, '#fdd835');
           updateWalletUI();
           playSound('collect');
           vibrate(50);
+
+          // Convertir cuerpo en comida
+          for (let s = 0; s < b.segments.length; s += 2) {
+            foodOrbs.push({ x: b.segments[s].x, y: b.segments[s].y, r: 3.5, color: b.color });
+          }
           break;
         }
       }
+    }
+
+    // Reaparición controlada de bots
+    if (bots.length < 5) {
+      const botColors = ['#ff5b87', '#bd93f9', '#fdd835', '#ff9a3c', '#50fa7b'];
+      bots.push(createSnake(Math.random() * (MAP_SIZE - 300) + 150, Math.random() * (MAP_SIZE - 300) + 150, botColors[Math.floor(Math.random() * botColors.length)], false));
     }
     return;
   }
@@ -882,22 +1072,127 @@ function update(dt) {
   shake *= 0.88;
 }
 
+// ==========================================
+// IA INTELIGENTE Y FÍSICAS DE SERPIENTES
+// ==========================================
+function updateBotAI(bot, dt) {
+  bot.aiTimer -= dt;
+  if (bot.aiTimer > 0) return;
+  bot.aiTimer = 0.12 + Math.random() * 0.08;
+
+  // 1. Raycast de Evasión: Comprobar peligro adelante
+  let danger = false;
+  let avoidAngle = 0;
+  const lookDist = 75;
+  const forwardX = bot.x + Math.cos(bot.angle) * lookDist;
+  const forwardY = bot.y + Math.sin(bot.angle) * lookDist;
+
+  // Peligro: Muros
+  if (forwardX < 40 || forwardX > MAP_SIZE - 40 || forwardY < 40 || forwardY > MAP_SIZE - 40) {
+    danger = true;
+    avoidAngle = Math.atan2(MAP_SIZE / 2 - bot.y, MAP_SIZE / 2 - bot.x);
+  }
+
+  // Peligro: Cuerpo del jugador
+  if (!danger && playerSnake) {
+    for (let i = 0; i < playerSnake.segments.length; i += 2) {
+      if (Math.hypot(forwardX - playerSnake.segments[i].x, forwardY - playerSnake.segments[i].y) < 38) {
+        danger = true;
+        avoidAngle = bot.angle + Math.PI * 0.75;
+        break;
+      }
+    }
+  }
+
+  if (danger) {
+    bot.targetAngle = avoidAngle;
+    bot.isBoosting = false;
+    return;
+  }
+
+  // 2. Comportamiento Ofensivo: Intentar encerrar al jugador si es más grande
+  if (playerSnake && bot.length > playerSnake.length && Math.hypot(playerSnake.x - bot.x, playerSnake.y - bot.y) < 180) {
+    const cutX = playerSnake.x + Math.cos(playerSnake.angle) * 60;
+    const cutY = playerSnake.y + Math.sin(playerSnake.angle) * 60;
+    bot.targetAngle = Math.atan2(cutY - bot.y, cutX - bot.x);
+    bot.isBoosting = true;
+    return;
+  }
+
+  // 3. Búsqueda de Comida
+  bot.isBoosting = false;
+  let closest = null;
+  let minDist = 220;
+  for (const f of foodOrbs) {
+    const d = Math.hypot(f.x - bot.x, f.y - bot.y);
+    if (d < minDist) {
+      minDist = d;
+      closest = f;
+    }
+  }
+
+  if (closest) {
+    bot.targetAngle = Math.atan2(closest.y - bot.y, closest.x - bot.x);
+  } else if (Math.random() < 0.25) {
+    bot.targetAngle += (Math.random() - 0.5) * 1.2;
+  }
+}
+
 function updateSnake(snake, dt) {
   if (!snake.alive) return;
-  const spd = (snake.isPlayer && isBoosting && snake.length > 8) ? snake.speed * 1.9 : snake.speed;
+  const boosting = snake.isPlayer ? (isBoosting && snake.length > 8) : (snake.isBoosting && snake.length > 12);
+  const currentSpeed = boosting ? snake.speed * 1.85 : snake.speed;
+
+  // Rotación elástica continua
   let diff = snake.targetAngle - snake.angle;
   while (diff < -Math.PI) diff += Math.PI * 2;
   while (diff > Math.PI) diff -= Math.PI * 2;
-  snake.angle += diff * Math.min(1, dt * 7.5);
-  snake.x += Math.cos(snake.angle) * spd * dt;
-  snake.y += Math.sin(snake.angle) * spd * dt;
+  snake.angle += diff * Math.min(1, dt * 8.5);
 
+  snake.x += Math.cos(snake.angle) * currentSpeed * dt;
+  snake.y += Math.sin(snake.angle) * currentSpeed * dt;
+
+  // Límite de arena
   if (snake.x < 10 || snake.x > MAP_SIZE - 10 || snake.y < 10 || snake.y > MAP_SIZE - 10) {
     if (snake.isPlayer) finish();
     else snake.alive = false;
+    return;
   }
-  snake.segments.unshift({ x: snake.x, y: snake.y });
-  while (snake.segments.length > Math.floor(snake.length)) snake.segments.pop();
+
+  // Turbo suelta masa
+  if (boosting) {
+    snake.boostClock += dt;
+    if (snake.boostClock > 0.14) {
+      snake.boostClock = 0;
+      snake.length -= 0.35;
+      const tail = snake.segments[snake.segments.length - 1];
+      foodOrbs.push({ x: tail.x, y: tail.y, r: 2.2, color: snake.color });
+    }
+  }
+
+  // Física de arrastre suave de segmentos (distancia fija de 7px)
+  const head = { x: snake.x, y: snake.y };
+  let prev = head;
+  for (let i = 0; i < snake.segments.length; i++) {
+    const seg = snake.segments[i];
+    const dx = prev.x - seg.x;
+    const dy = prev.y - seg.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 7) {
+      const factor = (dist - 7) / dist;
+      seg.x += dx * factor;
+      seg.y += dy * factor;
+    }
+    prev = seg;
+  }
+
+  while (snake.segments.length < Math.floor(snake.length)) {
+    const last = snake.segments[snake.segments.length - 1] || head;
+    snake.segments.push({ x: last.x, y: last.y });
+  }
+  while (snake.segments.length > Math.floor(snake.length)) {
+    snake.segments.pop();
+  }
 }
 
 // ==========================================
@@ -911,7 +1206,7 @@ function draw(time) {
   if (shake > 0.1) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
 
   // ----------------------------------------
-  // MODO PULSO
+  // MODO PULSO (GEOMETRY DASH PRO)
   // ----------------------------------------
   if (selectedMode === 'pulse') {
     ctx.strokeStyle = '#6df7e8';
@@ -919,6 +1214,7 @@ function draw(time) {
     ctx.shadowBlur = 10;
     ctx.shadowColor = '#6df7e8';
 
+    // Suelo y techo con efecto neón
     ctx.beginPath();
     ctx.moveTo(0, pulseFloor); ctx.lineTo(w, pulseFloor);
     ctx.moveTo(0, pulseCeil); ctx.lineTo(w, pulseCeil);
@@ -931,26 +1227,52 @@ function draw(time) {
         ctx.beginPath();
         ctx.moveTo(ob.x - 14, pulseFloor);
         ctx.lineTo(ob.x + 14, pulseFloor);
-        ctx.lineTo(ob.x, pulseFloor - 24);
+        ctx.lineTo(ob.x, pulseFloor - 25);
         ctx.closePath();
         ctx.fill();
-      } else {
+      } else if (ob.type === 'block') {
+        ctx.fillStyle = '#14172f';
+        ctx.strokeStyle = '#6df7e8';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#6df7e8';
+        ctx.fillRect(ob.x - ob.w / 2, ob.y - ob.h / 2, ob.w, ob.h);
+        ctx.strokeRect(ob.x - ob.w / 2, ob.y - ob.h / 2, ob.w, ob.h);
+      } else if (ob.type === 'orb') {
+        ctx.fillStyle = ob.used ? '#555877' : '#fdd835';
+        ctx.shadowColor = '#fdd835';
+        ctx.beginPath();
+        ctx.arc(ob.x, ob.y, 11, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ob.x, ob.y, 16, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (ob.type === 'portal') {
         ctx.fillStyle = '#bd93f9';
         ctx.shadowColor = '#bd93f9';
         ctx.beginPath();
-        ctx.arc(ob.x, (pulseFloor + pulseCeil) / 2, 14, 0, Math.PI * 2);
+        ctx.arc(ob.x, (pulseFloor + pulseCeil) / 2, 16, 0, Math.PI * 2);
         ctx.fill();
       }
     }
 
+    // Cubo con rotación exacta de 90°
     const px = w * 0.25;
     ctx.save();
     ctx.translate(px, pulseY);
-    ctx.rotate(pulseVy * 0.002);
+    ctx.rotate(pulseRotation);
     ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#6df7e8';
+    ctx.lineWidth = 2;
     ctx.shadowColor = '#6df7e8';
     ctx.shadowBlur = 16;
-    ctx.fillRect(-11, -11, 22, 22);
+    ctx.fillRect(-12, -12, 24, 24);
+    ctx.strokeRect(-12, -12, 24, 24);
+
+    // Ojo central característico
+    ctx.fillStyle = '#6df7e8';
+    ctx.fillRect(-4, -4, 8, 8);
     ctx.restore();
 
   } else if (selectedMode === 'constellation' && playerSnake) {
@@ -962,6 +1284,7 @@ function draw(time) {
     ctx.save();
     ctx.translate(camX, camY);
 
+    // Muros
     ctx.strokeStyle = 'rgba(255, 91, 135, 0.4)';
     ctx.lineWidth = 4;
     ctx.strokeRect(0, 0, MAP_SIZE, MAP_SIZE);
@@ -979,7 +1302,7 @@ function draw(time) {
       ctx.fillStyle = s.color;
       for (const seg of s.segments) {
         ctx.beginPath();
-        ctx.arc(seg.x, seg.y, 4.5, 0, Math.PI * 2);
+        ctx.arc(seg.x, seg.y, 4.8, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.fillStyle = '#ffffff';
@@ -991,7 +1314,7 @@ function draw(time) {
 
   } else {
     // ----------------------------------------
-    // MODOS ORIGINALES (CLÁSICO / EVOLUCIÓN)
+    // MODOS CLÁSICO / EVOLUCIÓN
     // ----------------------------------------
     for (const s of stars) {
       const twinkle = 0.75 + Math.sin(time * 0.001 + s.phase) * 0.25;
@@ -1003,7 +1326,7 @@ function draw(time) {
     }
     ctx.globalAlpha = 1;
 
-    // Núcleo orbital con gradiente radial de profundidad[span_0](start_span)[span_0](end_span)
+    // Núcleo orbital con gradiente radial de profundidad[cite: 3]
     const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, rings[0] * 0.72);
     glow.addColorStop(0, '#252b55');
     glow.addColorStop(0.58, '#151a36');
@@ -1015,7 +1338,7 @@ function draw(time) {
 
     const shape = getGeometryType();
 
-    // Anillos y arcos de neón[span_1](start_span)[span_1](end_span)
+    // Anillos y arcos de neón[cite: 3]
     for (let ring = 0; ring < rings.length; ring++) {
       const r = rings[ring];
       ctx.beginPath();
@@ -1034,7 +1357,7 @@ function draw(time) {
       }
     }
 
-    // Objetos con sombras y rotaciones originales[span_2](start_span)[span_2](end_span)
+    // Objetos con sombras y rotaciones[cite: 3]
     for (const obj of objects) {
       const r = rings[obj.ring] * getRadiusModifier(obj.a, shape);
       const x = cx + Math.cos(obj.a) * r;
@@ -1083,7 +1406,7 @@ function draw(time) {
     }
     ctx.globalAlpha = 1;
 
-    // Nave del jugador[span_3](start_span)[span_3](end_span)
+    // Nave del jugador[cite: 3]
     const playerR = currentRadius * getRadiusModifier(angle, shape);
     const px = cx + Math.cos(angle) * playerR;
     const py = cy + Math.sin(angle) * playerR;
@@ -1117,7 +1440,7 @@ function draw(time) {
     }
     ctx.restore();
 
-    // Partículas de explosión[span_4](start_span)[span_4](end_span)
+    // Partículas de explosión[cite: 3]
     for (const p of particles) {
       ctx.globalAlpha = Math.max(0, p.life / p.max);
       ctx.fillStyle = p.color;
