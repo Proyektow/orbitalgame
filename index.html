@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#090b18">
   <title>Órbita Evolución</title>
   
-  <!-- Icono dinámico SVG para la pestaña del navegador y pantalla del móvil -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='110' fill='%23090b18'/><ellipse cx='256' cy='256' rx='190' ry='110' fill='none' stroke='%236df7e8' stroke-width='24' transform='rotate(-30 256 256)'/><circle cx='256' cy='256' r='40' fill='%236df7e8'/><circle cx='385' cy='180' r='28' fill='%23ff5b87'/></svg>">
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='110' fill='%23090b18'/><ellipse cx='256' cy='256' rx='190' ry='110' fill='none' stroke='%236df7e8' stroke-width='24' transform='rotate(-30 256 256)'/><circle cx='256' cy='256' r='40' fill='%236df7e8'/><circle cx='385' cy='180' r='28' fill='%23ff5b87'/></svg>">
+  <!-- Favicon e icono para móvil con bola en medio y 2 esferas de colores -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%23090b18'/><ellipse cx='50' cy='50' rx='40' ry='18' fill='none' stroke='%23343958' stroke-width='3' transform='rotate(-28 50 50)'/><circle cx='50' cy='50' r='9' fill='%23ffffff'/><circle cx='80' cy='34' r='7' fill='%236df7e8'/><circle cx='20' cy='66' r='5' fill='%23ff5b87'/></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%23090b18'/><ellipse cx='50' cy='50' rx='40' ry='18' fill='none' stroke='%23343958' stroke-width='3' transform='rotate(-28 50 50)'/><circle cx='50' cy='50' r='9' fill='%23ffffff'/><circle cx='80' cy='34' r='7' fill='%236df7e8'/><circle cx='20' cy='66' r='5' fill='%23ff5b87'/></svg>">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -44,15 +44,51 @@
 
     <!-- Menú Central -->
     <div class="center-ui" id="overlay">
-      <!-- Nuevo Logotipo Vectorial -->
+      <!-- Nuevo Logotipo Vectorial con Núcleo y dos Esferas -->
       <div class="brand-logo" aria-hidden="true">
-        <svg viewBox="0 0 100 100" class="logo-svg">
-          <ellipse cx="50" cy="50" rx="42" ry="24" class="logo-orbit main-orbit" transform="rotate(-30 50 50)"/>
-          <ellipse cx="50" cy="50" rx="42" ry="24" class="logo-orbit sub-orbit" transform="rotate(30 50 50)"/>
-          <circle cx="50" cy="50" r="11" class="logo-core"/>
-          <circle cx="50" cy="50" r="5" class="logo-spark"/>
-          <circle cx="80" cy="33" r="4.5" class="logo-satellite sat-cyan"/>
-          <circle cx="20" cy="67" r="4" class="logo-satellite sat-pink"/>
+        <svg viewBox="0 0 120 120" class="logo-svg">
+          <defs>
+            <!-- Filtros de brillo Neón -->
+            <filter id="glow-cyan" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3.5" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+            <filter id="glow-pink" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3.5" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+            <filter id="glow-core" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="4" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+
+          <!-- Órbita Secundaria de fondo -->
+          <ellipse cx="60" cy="60" rx="46" ry="21" class="logo-orbit sub-orbit" transform="rotate(38 60 60)"/>
+          
+          <!-- Anillo de contención del núcleo -->
+          <circle cx="60" cy="60" r="14" class="logo-core-halo"/>
+
+          <!-- Bola central / Núcleo de energía -->
+          <circle cx="60" cy="60" r="7" class="logo-core-sphere" filter="url(#glow-core)"/>
+
+          <!-- Órbita Principal animada -->
+          <g class="rotating-group">
+            <ellipse cx="60" cy="60" rx="48" ry="22" class="logo-orbit main-orbit" transform="rotate(-28 60 60)"/>
+            <!-- Esfera 1: Cian (Orbital Exterior) -->
+            <circle cx="98" cy="40" r="6" class="sat-cyan" filter="url(#glow-cyan)"/>
+            <!-- Esfera 2: Rosa (Orbital Interior / Opuesta) -->
+            <circle cx="22" cy="80" r="4.5" class="sat-pink" filter="url(#glow-pink)"/>
+          </g>
         </svg>
       </div>
 
@@ -92,10 +128,10 @@
       </div>
       <div class="update-body">
         <ul id="update-list">
-          <li><strong>Nuevo Modo Evolución:</strong> Dificultad escalable con 3 carriles dinámicos.</li>
+          <li><strong>Nuevo Logotipo Órbita:</strong> Bola cuántica central y esferas duales de neón.</li>
+          <li><strong>Modo Evolución:</strong> Dificultad escalable con hasta 3 carriles dinámicos.</li>
           <li><strong>Geometrías variables:</strong> Órbitas en elipses, hexágonos y octógonos.</li>
           <li><strong>Power-Ups:</strong> Escudo protector, imán de luz y cámara lenta.</li>
-          <li><strong>Inversión orbital:</strong> Cuidado con los cambios súbitos de giro.</li>
         </ul>
       </div>
       <label class="modal-check">
