@@ -1,14 +1,14 @@
 {
-  "name": "Órbita Multiverso",
-  "short_name": "Órbita",
+  "name": "Bento Game",
+  "short_name": "Bento Game",
   "start_url": "./index.html",
   "display": "fullscreen",
   "orientation": "portrait",
-  "background_color": "#090b18",
-  "theme_color": "#090b18",
+  "background_color": "#f4f4f1",
+  "theme_color": "#f4f4f1",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='120' fill='%23090b18'/><defs><filter id='g' x='-50%25' y='-50%25' width='200%25' height='200%25'><feGaussianBlur stdDeviation='18' result='b'/><feMerge><feMergeNode in='b'/><feMergeNode in='SourceGraphic'/></feMerge></filter></defs><ellipse cx='256' cy='256' rx='200' ry='95' fill='none' stroke='%23343958' stroke-width='16' transform='rotate(-28 256 256)'/><circle cx='256' cy='256' r='48' fill='%2312152d' stroke='%23434b73' stroke-width='8'/><circle cx='256' cy='256' r='24' fill='%23ffffff' filter='url(%23g)'/><circle cx='410' cy='175' r='32' fill='%236df7e8' filter='url(%23g)'/><circle cx='105' cy='335' r='24' fill='%23ff5b87' filter='url(%23g)'/></svg>",
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%23f4f4f1'/><rect x='96' y='96' width='144' height='144' fill='none' stroke='%23141414' stroke-width='24'/><rect x='272' y='96' width='144' height='144' fill='%23141414'/><rect x='96' y='272' width='144' height='144' fill='none' stroke='%23141414' stroke-width='24'/><rect x='272' y='272' width='144' height='144' fill='%23d9381e'/></svg>",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
