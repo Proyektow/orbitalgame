@@ -1,10 +1,13 @@
-const CACHE_NAME = 'bento-game-v3.0.0';
+const CACHE_NAME = 'bento-macroapp-v4.0.0';
 const ASSETS = [
   './',
   './index.html',
   './style.css',
-  './game.js',
-  './manifest.json'
+  './manifest.json',
+  './icon.svg',
+  './js/audio.js',
+  './js/storage.js',
+  './js/engine.js'
 ];
 
 self.addEventListener('install', (e) => {
