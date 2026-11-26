@@ -1,7 +1,7 @@
 import { initAudio, playSound, vibrate } from './audio.js';
 import { State, saveState, addXP, getOperatorLevel, updateMissionProgress, exportBackupCode, importBackupCode } from './storage.js';
 
-const CURRENT_VERSION = '4.0.1';
+const CURRENT_VERSION = '4.0.2';
 
 const canvas = document.querySelector('#game');
 const ctx = canvas.getContext('2d');
@@ -120,7 +120,7 @@ let shieldActive = false, magnetTimer = 0, slowTimer = 0;
 let objects = [], particles = [], floatTexts = [];
 
 // 03 · Secuencia
-let seqTargetAngle = 0, seqArcWidth = 0.65, seqHitsInLevel = 0, seqLocks = [];
+let seqTargetAngle = 0, seqArcWidth = 0.72, seqHitsInLevel = 0, seqLocks = [];
 
 // 04 · Vector
 let vecY = 0, vecHolding = false, vecObstacles = [];
@@ -427,8 +427,16 @@ duelP1.addEventListener('pointerdown', () => handleDuelTap(0));
 duelP2.addEventListener('pointerdown', () => handleDuelTap(1));
 
 // ==========================================
-// INICIO Y FIN DE CARTUCHOS
+// MATEMÁTICA ANGULAR EXACTA (SIN FALLOS DE VUELTA)
 // ==========================================
+function shortestAngleDiff(a, b) {
+  const twoPi = Math.PI * 2;
+  let diff = (a - b) % twoPi;
+  if (diff > Math.PI) diff -= twoPi;
+  if (diff < -Math.PI) diff += twoPi;
+  return diff;
+}
+
 function formatTime(seconds) {
   const total = Math.floor(seconds);
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
@@ -559,15 +567,13 @@ function finish() {
 // ==========================================
 function spawnSafeOrbitPattern() {
   const numLanes = rings.length;
-  // Colocamos el primer elemento 2.2 radianes (~126 grados) por delante del jugador
   const baseAhead = 2.2;
   const startAngle = angle + baseAhead * direction;
 
-  // Comprobar si ya existe algún obstáculo demasiado cerca del punto de aparición
   for (const existing of objects) {
-    const angularGap = Math.abs(existing.a - startAngle);
+    const angularGap = Math.abs(shortestAngleDiff(existing.a, startAngle));
     if (angularGap < 0.65) {
-      return false; // Esperar al siguiente frame para garantizar espacio de paso
+      return false;
     }
   }
 
@@ -593,16 +599,13 @@ function spawnSafeOrbitPattern() {
   }
 
   if (roll < 0.45) {
-    // Obstáculo en un carril, ficha coleccionable en el otro carril con suficiente separación angular
     addObj(0, laneChoice, 'hazard', selectedMode === 'evolution' && level >= 3 && Math.random() < 0.3);
     addObj(0.28, safeLane, 'spark');
   } else if (roll < 0.78) {
-    // Dos fichas seguidas en un carril y un bloqueo separado en el otro
     addObj(0, safeLane, 'spark');
     addObj(0.26, laneChoice, 'hazard');
     addObj(0.52, safeLane, 'spark');
   } else {
-    // Doble bloqueo alternado con margen amplio (0.48 rad) para saltar entre carriles cómodamente
     addObj(0, laneChoice, 'hazard');
     addObj(0.48, safeLane, 'hazard');
   }
@@ -613,10 +616,10 @@ function spawnSafeOrbitPattern() {
 // LÓGICA ESPECÍFICA DE LOS OTROS CARTUCHOS
 // ==========================================
 function spawnSequenceTarget() {
-  const offset = (Math.PI * 0.65) + Math.random() * (Math.PI * 0.9);
+  const offset = (Math.PI * 0.7) + Math.random() * (Math.PI * 0.85);
   seqTargetAngle = angle + offset * direction;
-  const shrink = selectedDiff === 'hard' ? 0.72 : (selectedDiff === 'normal' ? 0.85 : 1);
-  seqArcWidth = Math.max(0.24, (0.68 - (level - 1) * 0.045) * shrink);
+  const shrink = selectedDiff === 'hard' ? 0.76 : (selectedDiff === 'normal' ? 0.88 : 1);
+  seqArcWidth = Math.max(0.32, (0.74 - (level - 1) * 0.04) * shrink);
 }
 
 function startMatrixRound() {
@@ -646,7 +649,73 @@ function spawnNextStackBlock() {
 }
 
 // ==========================================
-// PAUSA Y CONTROLES TÁCTILES
+// ACCIÓN CENTRAL (TOQUE O TECLA ESPACIO)
+// ==========================================
+function triggerGameAction() {
+  if (mode !== 'playing') return;
+
+  if (selectedMode === 'sequence') {
+    const diff = Math.abs(shortestAngleDiff(angle, seqTargetAngle));
+    // Tolerancia justa (+0.08 rad de margen por el radio de la bola)
+    const hitMargin = (seqArcWidth / 2) + 0.08;
+
+    const r = rings[0];
+    const px = cx + Math.cos(angle) * r;
+    const py = cy + Math.sin(angle) * r;
+
+    if (diff <= hitMargin) {
+      streak++;
+      seqHitsInLevel++;
+      const pts = Math.round((1 + Math.floor(streak / 4)) * scoreMultiplier);
+      score += pts;
+      scoreEl.textContent = score;
+      setStreak();
+      playSound('lock');
+      vibrate(20);
+      burst(px, py, true, 10);
+      spawnFloatText(`+${pts}`, px, py, scoreMultiplier > 1);
+      seqLocks.push(angle);
+
+      if (seqHitsInLevel >= 5) {
+        seqHitsInLevel = 0;
+        level++;
+        direction *= -1;
+        seqLocks = [];
+        levelEl.textContent = 'NIVEL ' + String(level).padStart(2, '0');
+        reverseBanner.classList.add('show');
+        setTimeout(() => reverseBanner.classList.remove('show'), 1100);
+      }
+      spawnSequenceTarget();
+    } else {
+      burst(px, py, true, 16);
+      finish();
+    }
+  } else if (selectedMode === 'stack') {
+    const prev = stackBlocks[stackBlocks.length - 1];
+    const overlapLeft = Math.max(prev.x, stackCurrent.x);
+    const overlapRight = Math.min(prev.x + prev.w, stackCurrent.x + stackCurrent.w);
+    const overlapW = overlapRight - overlapLeft;
+
+    if (overlapW <= 4) {
+      finish();
+    } else {
+      stackBlocks.push({ x: overlapLeft, w: overlapW });
+      if (stackBlocks.length > 10) stackBlocks.shift();
+      score += Math.round(1 * scoreMultiplier);
+      scoreEl.textContent = score;
+      playSound('lock');
+      vibrate(20);
+      spawnNextStackBlock();
+    }
+  } else if (selectedMode === 'classic' || selectedMode === 'evolution') {
+    targetLane = (targetLane + 1) % rings.length;
+    playSound('switch');
+    vibrate(18);
+  }
+}
+
+// ==========================================
+// PAUSA Y CONTROLES DE ENTRADA
 // ==========================================
 function togglePause() {
   if (mode === 'playing') { mode = 'paused'; pauseModal.hidden = false; }
@@ -666,6 +735,7 @@ quitBtn.addEventListener('click', (e) => {
 
 startButton.addEventListener('click', (e) => { e.stopPropagation(); begin(); });
 
+// Toques en pantalla
 shell.addEventListener('pointerdown', (e) => {
   if (e.target.closest('button, .modal-box, .hub-ui:not(.hidden), .duel-ui:not([hidden])')) return;
   if (mode !== 'playing') return;
@@ -701,51 +771,45 @@ shell.addEventListener('pointerdown', (e) => {
         finish();
       }
     }
-  } else if (selectedMode === 'stack') {
-    const prev = stackBlocks[stackBlocks.length - 1];
-    const overlapLeft = Math.max(prev.x, stackCurrent.x);
-    const overlapRight = Math.min(prev.x + prev.w, stackCurrent.x + stackCurrent.w);
-    const overlapW = overlapRight - overlapLeft;
-
-    if (overlapW <= 4) {
-      finish();
-    } else {
-      stackBlocks.push({ x: overlapLeft, w: overlapW });
-      if (stackBlocks.length > 10) stackBlocks.shift();
-      score += Math.round(1 * scoreMultiplier);
-      scoreEl.textContent = score;
-      playSound('lock');
-      vibrate(20);
-      spawnNextStackBlock();
-    }
-  } else if (selectedMode === 'sequence') {
-    let diff = (angle - seqTargetAngle) % (Math.PI * 2);
-    if (diff < -Math.PI) diff += Math.PI * 2;
-    if (diff > Math.PI) diff -= Math.PI * 2;
-
-    if (Math.abs(diff) <= seqArcWidth / 2) {
-      streak++; seqHitsInLevel++;
-      const pts = Math.round((1 + Math.floor(streak / 4)) * scoreMultiplier);
-      score += pts; scoreEl.textContent = score;
-      setStreak(); playSound('lock'); vibrate(20);
-      seqLocks.push(angle);
-      if (seqHitsInLevel >= 5) {
-        seqHitsInLevel = 0; level++; direction *= -1; seqLocks = [];
-        levelEl.textContent = 'NIVEL ' + String(level).padStart(2, '0');
-      }
-      spawnSequenceTarget();
-    } else {
-      finish();
-    }
   } else {
-    targetLane = (targetLane + 1) % rings.length;
-    playSound('switch');
-    vibrate(18);
+    triggerGameAction();
   }
 });
 
 shell.addEventListener('pointerup', () => { vecHolding = false; });
 shell.addEventListener('pointercancel', () => { vecHolding = false; });
+
+// Soporte de teclado (Espacio, Enter, Flechas)
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    e.preventDefault();
+    if (mode === 'playing' || mode === 'paused') togglePause();
+    return;
+  }
+
+  if (['Space', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyS'].includes(e.code)) {
+    e.preventDefault();
+    if (e.repeat) return; // Evita disparos múltiples si se deja pulsado en Secuencia/Órbita
+
+    if (mode === 'playing') {
+      if (selectedMode === 'vector') {
+        vecHolding = true;
+        playSound('tap');
+      } else {
+        triggerGameAction();
+      }
+    } else if (mode === 'ready' || mode === 'over') {
+      const anyModalOpen = !shopModal.hidden || !missionsModal.hidden || !profileModal.hidden || !document.querySelector('#update-modal').hidden || !duelUI.hidden;
+      if (!anyModalOpen) begin();
+    }
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  if (['Space', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyS'].includes(e.code)) {
+    vecHolding = false;
+  }
+});
 
 // ==========================================
 // ACTUALIZACIÓN DE FÍSICAS (UPDATE)
@@ -824,18 +888,33 @@ function update(dt) {
     return;
   }
 
+  // ----------------------------------------
+  // MODO 03 · SECUENCIA (CON DETECCIÓN EXACTA)
+  // ----------------------------------------
   if (selectedMode === 'sequence') {
-    angle += (1.6 + Math.min((level - 1) * 0.22, 2.2)) * dt * direction;
-    let diff = ((angle - seqTargetAngle) % (Math.PI * 2));
-    if (diff < -Math.PI) diff += Math.PI * 2;
-    if (diff > Math.PI) diff -= Math.PI * 2;
-    if (diff * direction > seqArcWidth / 2 + 0.14) finish();
+    const speed = (1.55 + Math.min((level - 1) * 0.2, 2.0)) * (selectedDiff === 'hard' ? 1.2 : 1);
+    angle += speed * dt * direction;
+
+    const r = rings[0];
+    const px = cx + Math.cos(angle) * r;
+    const py = cy + Math.sin(angle) * r;
+    trail.unshift({ x: px, y: py, alpha: 1 });
+    if (trail.length > 10) trail.pop();
+    for (const t of trail) t.alpha -= dt * 3;
+    trail = trail.filter(t => t.alpha > 0);
+
+    // Calcular distancia angular normalizada en la dirección del movimiento
+    const signedDiff = shortestAngleDiff(angle, seqTargetAngle) * direction;
+    if (signedDiff > (seqArcWidth / 2) + 0.14) {
+      burst(px, py, true, 16);
+      finish();
+    }
     return;
   }
 
-  // ==========================================
-  // ÓRBITA Y EVOLUCIÓN (CON LIMPIEZA DE PINCHOS)
-  // ==========================================
+  // ----------------------------------------
+  // MODO 01 · ÓRBITA & 02 · EVOLUCIÓN
+  // ----------------------------------------
   const shape = getGeometryType();
   const destRadius = rings[targetLane] || rings[0];
   currentRadius += (destRadius - currentRadius) * Math.min(1, dt * 20);
@@ -854,7 +933,6 @@ function update(dt) {
     resize();
   }
 
-  // Inversión segura en Evolución
   if (selectedMode === 'evolution' && level >= 3) {
     reverseTimer -= effectiveDt;
     if (reverseTimer <= 2 && reverseTimer > 0) {
@@ -864,8 +942,7 @@ function update(dt) {
       reverseTimer = 20 + Math.random() * 10;
       reverseBanner.classList.remove('show');
       vibrate([40, 30, 40]);
-      // Eliminar obstáculos demasiado cercanos tras el cambio de sentido para evitar muertes injustas
-      objects = objects.filter(o => Math.abs(o.a - angle) > 0.9);
+      objects = objects.filter(o => Math.abs(shortestAngleDiff(o.a, angle)) > 0.9);
     }
   }
 
@@ -944,12 +1021,9 @@ function update(dt) {
     }
   }
 
-  // ELIMINACIÓN AUTOMÁTICA DE PINCHOS Y OBJETOS QUE YA QUEDARON ATRÁS
   objects = objects.filter(o => {
     if (o.hit) return false;
-    // Distancia relativa en el sentido de avance del jugador
-    const relAngle = (o.a - angle) * direction;
-    // Si relAngle < -0.45 significa que ya lo hemos sobrepasado por detrás -> se borra
+    const relAngle = shortestAngleDiff(o.a, angle) * direction;
     return relAngle > -0.45 && relAngle < 3.6;
   });
 
@@ -1066,9 +1140,11 @@ function draw() {
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.strokeStyle = pal.borderSoft; ctx.lineWidth = 2; ctx.stroke();
 
+    // Arco objetivo
     ctx.beginPath(); ctx.arc(cx, cy, r, seqTargetAngle - seqArcWidth / 2, seqTargetAngle + seqArcWidth / 2);
     ctx.strokeStyle = pal.ink; ctx.lineWidth = 14; ctx.stroke();
 
+    // Marcas de acierto
     for (const lockAng of seqLocks) {
       const lx = cx + Math.cos(lockAng) * r;
       const ly = cy + Math.sin(lockAng) * r;
@@ -1117,8 +1193,7 @@ function draw() {
     const x = cx + Math.cos(obj.a) * r;
     const y = cy + Math.sin(obj.a) * r;
 
-    // Opacidad suave al entrar o salir por detrás del jugador
-    const relAngle = (obj.a - angle) * direction;
+    const relAngle = shortestAngleDiff(obj.a, angle) * direction;
     ctx.globalAlpha = relAngle < 0 ? Math.max(0, 1 + relAngle * 2.2) : 1;
 
     if (obj.type === 'hazard') {
