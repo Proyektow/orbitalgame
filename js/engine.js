@@ -1,7 +1,7 @@
 import { initAudio, playSound, vibrate } from './audio.js';
 import { State, saveState, addXP, getOperatorLevel, updateMissionProgress, exportBackupCode, importBackupCode } from './storage.js';
 
-const CURRENT_VERSION = '4.0.0';
+const CURRENT_VERSION = '4.0.1';
 
 const canvas = document.querySelector('#game');
 const ctx = canvas.getContext('2d');
@@ -69,6 +69,7 @@ function getPalette() {
   const styles = getComputedStyle(document.body);
   return {
     bg: styles.getPropertyValue('--bg').trim() || '#f4f4f1',
+    cardBg: styles.getPropertyValue('--card-bg').trim() || '#ffffff',
     ink: styles.getPropertyValue('--ink').trim() || '#141414',
     muted: styles.getPropertyValue('--muted').trim() || '#666662',
     borderSoft: styles.getPropertyValue('--border-soft').trim() || '#d5d5d0',
@@ -98,7 +99,7 @@ refreshHubUI();
 // ==========================================
 // VARIABLES DE MOTOR
 // ==========================================
-let selectedMode = 'classic'; // 'classic' | 'evolution' | 'sequence' | 'vector' | 'matrix' | 'stack'
+let selectedMode = 'classic';
 let selectedDiff = 'easy';
 let activeFilter = 'all';
 
@@ -121,13 +122,13 @@ let objects = [], particles = [], floatTexts = [];
 // 03 · Secuencia
 let seqTargetAngle = 0, seqArcWidth = 0.65, seqHitsInLevel = 0, seqLocks = [];
 
-// 04 · Vector (Wave)
+// 04 · Vector
 let vecY = 0, vecHolding = false, vecObstacles = [];
 
-// 05 · Matriz (Memoria)
+// 05 · Matriz
 let matGridSize = 4, matPattern = [], matSelected = [], matPhase = 'show', matTimer = 0;
 
-// 06 · Equilibrio (Stack)
+// 06 · Equilibrio
 let stackBlocks = [], stackCurrent = null, stackDir = 1;
 
 function resize() {
@@ -148,6 +149,21 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 resize();
+
+function getGeometryType() {
+  if (selectedMode !== 'evolution') return 'circle';
+  if (selectedDiff === 'hard' || level >= 6) return 'octagon';
+  if (selectedDiff === 'normal' || level >= 4) return 'hexagon';
+  if (level >= 2) return 'ellipse';
+  return 'circle';
+}
+
+function getRadiusModifier(theta, shape) {
+  if (shape === 'ellipse') return 1 + 0.14 * Math.cos(2 * theta);
+  if (shape === 'hexagon') return 1 + 0.06 * Math.cos(6 * theta);
+  if (shape === 'octagon') return 1 + 0.07 * Math.cos(8 * theta);
+  return 1;
+}
 
 // ==========================================
 // NAVEGACIÓN DEL HUB Y MODALES
@@ -328,7 +344,7 @@ document.querySelector('#import-btn').addEventListener('click', () => {
 });
 
 // ==========================================
-// MODO DUELO LOCAL 1v1 (PASS & PLAY)
+// MODO DUELO LOCAL 1v1
 // ==========================================
 const duelUI = document.querySelector('#duel-ui');
 const duelP1 = document.querySelector('#duel-p1');
@@ -429,6 +445,26 @@ function setStreak() {
   streakEl.innerHTML = Array.from({ length: 5 }, (_, i) => `<span class="${i < streak % 5 ? 'on' : ''}"></span>`).join('');
 }
 
+function burst(x, y, isAccent = false, count = 10) {
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const speed = 35 + Math.random() * 100;
+    particles.push({
+      x, y,
+      vx: Math.cos(a) * speed,
+      vy: Math.sin(a) * speed,
+      life: 0.3 + Math.random() * 0.3,
+      max: 0.6,
+      isAccent,
+      size: 2.5 + Math.random() * 2
+    });
+  }
+}
+
+function spawnFloatText(text, x, y, isAccent = false) {
+  floatTexts.push({ text, x, y, vy: -30, alpha: 1, isAccent });
+}
+
 function begin() {
   State.attempts++;
   initAudio();
@@ -482,7 +518,7 @@ function begin() {
     scoreLabelEl.textContent = 'PUNTOS';
     streakEl.style.display = 'flex';
     setStreak();
-    spawnClock = 0.5;
+    spawnClock = 0.35;
     reverseTimer = 18;
     statusEl.textContent = 'ÓRBITA ACTIVA';
   }
@@ -519,9 +555,63 @@ function finish() {
 }
 
 // ==========================================
-// LÓGICA ESPECÍFICA DE LOS NUEVOS CARTUCHOS
+// GENERACIÓN SEGURA DE OBSTÁCULOS ORBITALES
 // ==========================================
-// 03 · Secuencia
+function spawnSafeOrbitPattern() {
+  const numLanes = rings.length;
+  // Colocamos el primer elemento 2.2 radianes (~126 grados) por delante del jugador
+  const baseAhead = 2.2;
+  const startAngle = angle + baseAhead * direction;
+
+  // Comprobar si ya existe algún obstáculo demasiado cerca del punto de aparición
+  for (const existing of objects) {
+    const angularGap = Math.abs(existing.a - startAngle);
+    if (angularGap < 0.65) {
+      return false; // Esperar al siguiente frame para garantizar espacio de paso
+    }
+  }
+
+  const laneChoice = Math.floor(Math.random() * numLanes);
+  const safeLane = (laneChoice + 1) % numLanes;
+  const roll = Math.random();
+
+  const addObj = (offset, ring, type, moving = false) => {
+    objects.push({
+      a: startAngle + offset * direction,
+      ring,
+      type,
+      moving,
+      moveDir: 1,
+      hit: false
+    });
+  };
+
+  if (selectedMode === 'evolution' && roll < 0.14) {
+    const pTypes = ['shield', 'magnet', 'slow'];
+    addObj(0, safeLane, pTypes[Math.floor(Math.random() * pTypes.length)]);
+    return true;
+  }
+
+  if (roll < 0.45) {
+    // Obstáculo en un carril, ficha coleccionable en el otro carril con suficiente separación angular
+    addObj(0, laneChoice, 'hazard', selectedMode === 'evolution' && level >= 3 && Math.random() < 0.3);
+    addObj(0.28, safeLane, 'spark');
+  } else if (roll < 0.78) {
+    // Dos fichas seguidas en un carril y un bloqueo separado en el otro
+    addObj(0, safeLane, 'spark');
+    addObj(0.26, laneChoice, 'hazard');
+    addObj(0.52, safeLane, 'spark');
+  } else {
+    // Doble bloqueo alternado con margen amplio (0.48 rad) para saltar entre carriles cómodamente
+    addObj(0, laneChoice, 'hazard');
+    addObj(0.48, safeLane, 'hazard');
+  }
+  return true;
+}
+
+// ==========================================
+// LÓGICA ESPECÍFICA DE LOS OTROS CARTUCHOS
+// ==========================================
 function spawnSequenceTarget() {
   const offset = (Math.PI * 0.65) + Math.random() * (Math.PI * 0.9);
   seqTargetAngle = angle + offset * direction;
@@ -529,7 +619,6 @@ function spawnSequenceTarget() {
   seqArcWidth = Math.max(0.24, (0.68 - (level - 1) * 0.045) * shrink);
 }
 
-// 05 · Matriz
 function startMatrixRound() {
   matGridSize = level >= 4 ? 5 : 4;
   const totalCells = matGridSize * matGridSize;
@@ -544,7 +633,6 @@ function startMatrixRound() {
   matTimer = Math.max(0.9, 1.8 - level * 0.1);
 }
 
-// 06 · Equilibrio (Stack)
 function initStackGame() {
   const baseW = 140;
   stackBlocks = [{ x: cx - baseW / 2, w: baseW }];
@@ -663,6 +751,21 @@ shell.addEventListener('pointercancel', () => { vecHolding = false; });
 // ACTUALIZACIÓN DE FÍSICAS (UPDATE)
 // ==========================================
 function update(dt) {
+  particles = particles.filter(p => p.life > 0);
+  for (const p of particles) {
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vx *= 0.94;
+    p.vy *= 0.94;
+    p.life -= dt;
+  }
+
+  for (const ft of floatTexts) {
+    ft.y += ft.vy * dt;
+    ft.alpha -= dt * 1.6;
+  }
+  floatTexts = floatTexts.filter(ft => ft.alpha > 0);
+
   if (shake > 0.1) shake *= 0.86; else shake = 0;
   if (mode !== 'playing') return;
 
@@ -672,7 +775,7 @@ function update(dt) {
   if (selectedMode === 'vector') {
     const vy = vecHolding ? 230 : -230;
     vecY += vy * dt;
-    trail.unshift({ x: w * 0.28, y: vecY });
+    trail.unshift({ x: w * 0.28, y: vecY, alpha: 1 });
     if (trail.length > 26) trail.pop();
     for (const t of trail) t.x -= 210 * dt;
 
@@ -730,53 +833,170 @@ function update(dt) {
     return;
   }
 
-  // Órbita y Evolución
+  // ==========================================
+  // ÓRBITA Y EVOLUCIÓN (CON LIMPIEZA DE PINCHOS)
+  // ==========================================
+  const shape = getGeometryType();
   const destRadius = rings[targetLane] || rings[0];
   currentRadius += (destRadius - currentRadius) * Math.min(1, dt * 20);
-  angle += (1.45 + Math.min((level - 1) * 0.15, 1.5)) * dt * direction;
 
-  spawnClock -= dt;
-  if (spawnClock <= 0) {
-    const laneChoice = Math.floor(Math.random() * rings.length);
-    objects.push({ a: angle + 2.0 * direction, ring: laneChoice, type: 'hazard', hit: false });
-    objects.push({ a: angle + 2.24 * direction, ring: (laneChoice + 1) % rings.length, type: 'spark', hit: false });
-    spawnClock = Math.max(0.46, 1.22 - (level - 1) * 0.08);
+  if (magnetTimer > 0) { magnetTimer -= dt; hudMagnet.hidden = false; } else { hudMagnet.hidden = true; }
+  if (slowTimer > 0) { slowTimer -= dt; hudSlow.hidden = false; } else { hudSlow.hidden = true; }
+  hudShield.hidden = !shieldActive;
+
+  const timeScale = slowTimer > 0 ? 0.55 : 1;
+  const effectiveDt = dt * timeScale;
+
+  const baseLevel = selectedDiff === 'hard' ? 3 : (selectedDiff === 'normal' ? 2 : 1);
+  const nextLevel = baseLevel + Math.max(Math.floor(score / 8), Math.floor(elapsed / 22));
+  if (nextLevel > level) {
+    level = nextLevel;
+    resize();
   }
 
-  const px = cx + Math.cos(angle) * currentRadius;
-  const py = cy + Math.sin(angle) * currentRadius;
+  // Inversión segura en Evolución
+  if (selectedMode === 'evolution' && level >= 3) {
+    reverseTimer -= effectiveDt;
+    if (reverseTimer <= 2 && reverseTimer > 0) {
+      reverseBanner.classList.add('show');
+    } else if (reverseTimer <= 0) {
+      direction *= -1;
+      reverseTimer = 20 + Math.random() * 10;
+      reverseBanner.classList.remove('show');
+      vibrate([40, 30, 40]);
+      // Eliminar obstáculos demasiado cercanos tras el cambio de sentido para evitar muertes injustas
+      objects = objects.filter(o => Math.abs(o.a - angle) > 0.9);
+    }
+  }
+
+  const baseSpeed = 1.45 + Math.min((level - 1) * 0.14, 1.45);
+  angle += baseSpeed * effectiveDt * direction;
+
+  spawnClock -= effectiveDt;
+  if (spawnClock <= 0) {
+    if (spawnSafeOrbitPattern()) {
+      spawnClock = Math.max(0.62, 1.35 - (level - 1) * 0.07);
+    }
+  }
+
+  levelEl.textContent = 'NIVEL ' + String(level).padStart(2, '0');
+
+  const playerR = currentRadius * getRadiusModifier(angle, shape);
+  const px = cx + Math.cos(angle) * playerR;
+  const py = cy + Math.sin(angle) * playerR;
+
+  trail.unshift({ x: px, y: py, alpha: 1 });
+  if (trail.length > 12) trail.pop();
 
   for (const obj of objects) {
     if (obj.hit) continue;
-    const r = rings[obj.ring];
-    const ox = cx + Math.cos(obj.a) * r;
-    const oy = cy + Math.sin(obj.a) * r;
 
-    if (Math.hypot(px - ox, py - oy) < 18) {
-      if (obj.type === 'hazard') { finish(); break; }
-      else {
+    if (obj.moving) {
+      obj.ring += obj.moveDir * effectiveDt * 0.75;
+      if (obj.ring >= rings.length - 1) { obj.ring = rings.length - 1; obj.moveDir = -1; }
+      else if (obj.ring <= 0) { obj.ring = 0; obj.moveDir = 1; }
+    }
+
+    const rBase = rings[Math.round(obj.ring)] || rings[0];
+    const r = rBase * getRadiusModifier(obj.a, shape);
+    let ox = cx + Math.cos(obj.a) * r;
+    let oy = cy + Math.sin(obj.a) * r;
+
+    if (magnetTimer > 0 && obj.type === 'spark') {
+      ox += (px - ox) * 0.18;
+      oy += (py - oy) * 0.18;
+    }
+
+    if (Math.hypot(px - ox, py - oy) < 17) {
+      if (obj.type === 'hazard') {
+        if (shieldActive) {
+          shieldActive = false;
+          obj.hit = true;
+          burst(ox, oy, false, 12);
+          playSound('powerup');
+          vibrate(35);
+        } else {
+          burst(px, py, true, 18);
+          finish();
+          break;
+        }
+      } else if (obj.type === 'spark') {
         obj.hit = true;
         streak++;
-        score += Math.round((1 + Math.floor(streak / 5)) * scoreMultiplier);
+        const pts = Math.round((1 + Math.floor(streak / 5)) * scoreMultiplier);
+        score += pts;
         scoreEl.textContent = score;
         setStreak();
         playSound('collect');
         vibrate(18);
+        burst(ox, oy, false, 8);
+        spawnFloatText(`+${pts}`, ox, oy, scoreMultiplier > 1);
+      } else if (['shield', 'magnet', 'slow'].includes(obj.type)) {
+        obj.hit = true;
+        playSound('powerup');
+        vibrate([25, 25]);
+        if (obj.type === 'shield') shieldActive = true;
+        if (obj.type === 'magnet') magnetTimer = 7;
+        if (obj.type === 'slow') slowTimer = 5;
+        burst(ox, oy, true, 12);
+        spawnFloatText(obj.type.toUpperCase(), ox, oy, true);
       }
     }
   }
-  objects = objects.filter(o => !o.hit);
+
+  // ELIMINACIÓN AUTOMÁTICA DE PINCHOS Y OBJETOS QUE YA QUEDARON ATRÁS
+  objects = objects.filter(o => {
+    if (o.hit) return false;
+    // Distancia relativa en el sentido de avance del jugador
+    const relAngle = (o.a - angle) * direction;
+    // Si relAngle < -0.45 significa que ya lo hemos sobrepasado por detrás -> se borra
+    return relAngle > -0.45 && relAngle < 3.6;
+  });
+
+  for (const t of trail) t.alpha -= dt * 2.5;
+  trail = trail.filter(t => t.alpha > 0);
 }
 
 // ==========================================
 // RENDERIZADO CANVAS (DRAW)
 // ==========================================
+function drawNodeShape(x, y, rot, pal) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.fillStyle = pal.ink;
+  ctx.strokeStyle = pal.bg;
+  ctx.lineWidth = 2;
+
+  if (State.equippedSkin === 'square') {
+    ctx.fillRect(-7, -7, 14, 14);
+    ctx.strokeRect(-7, -7, 14, 14);
+  } else if (State.equippedSkin === 'diamond') {
+    ctx.beginPath();
+    ctx.moveTo(0, -9); ctx.lineTo(9, 0); ctx.lineTo(0, 9); ctx.lineTo(-9, 0);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  } else if (State.equippedSkin === 'ring') {
+    ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = pal.bg;
+    ctx.beginPath(); ctx.arc(0, 0, 3.5, 0, Math.PI * 2); ctx.fill();
+  } else if (State.equippedSkin === 'cross') {
+    ctx.fillRect(-8, -2.5, 16, 5);
+    ctx.fillRect(-2.5, -8, 5, 16);
+  } else {
+    ctx.beginPath(); ctx.arc(0, 0, 7.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function draw() {
   const pal = getPalette();
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
 
   if (mode !== 'playing') return;
+
+  ctx.save();
+  if (shake > 0.1) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
 
   if (selectedMode === 'vector') {
     ctx.strokeStyle = pal.ink; ctx.lineWidth = 2;
@@ -797,6 +1017,7 @@ function draw() {
     ctx.stroke();
     ctx.fillStyle = pal.accent;
     ctx.fillRect(w * 0.28 - 5, vecY - 5, 10, 10);
+    ctx.restore();
     return;
   }
 
@@ -819,6 +1040,7 @@ function draw() {
         ctx.strokeRect(x + 3, y + 3, cellSize - 6, cellSize - 6);
       }
     }
+    ctx.restore();
     return;
   }
 
@@ -835,6 +1057,7 @@ function draw() {
       ctx.fillStyle = pal.accent;
       ctx.fillRect(stackCurrent.x, y, stackCurrent.w, blockH - 2);
     }
+    ctx.restore();
     return;
   }
 
@@ -846,33 +1069,135 @@ function draw() {
     ctx.beginPath(); ctx.arc(cx, cy, r, seqTargetAngle - seqArcWidth / 2, seqTargetAngle + seqArcWidth / 2);
     ctx.strokeStyle = pal.ink; ctx.lineWidth = 14; ctx.stroke();
 
+    for (const lockAng of seqLocks) {
+      const lx = cx + Math.cos(lockAng) * r;
+      const ly = cy + Math.sin(lockAng) * r;
+      ctx.fillStyle = pal.accent;
+      ctx.fillRect(lx - 4, ly - 4, 8, 8);
+    }
+
+    ctx.fillStyle = pal.ink;
+    ctx.font = '700 26px "DM Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${seqHitsInLevel}/5`, cx, cy);
+
     const px = cx + Math.cos(angle) * r;
     const py = cy + Math.sin(angle) * r;
-    ctx.fillStyle = pal.accent;
-    ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI * 2); ctx.fill();
+    drawNodeShape(px, py, angle + Math.PI / 2, pal);
+    ctx.restore();
     return;
   }
 
   // Órbita y Evolución
-  for (let i = 0; i < rings.length; i++) {
-    ctx.beginPath(); ctx.arc(cx, cy, rings[i], 0, Math.PI * 2);
-    ctx.strokeStyle = targetLane === i ? pal.ink : pal.borderSoft;
-    ctx.lineWidth = targetLane === i ? 2 : 1.5;
+  const shape = getGeometryType();
+  ctx.fillStyle = pal.ink;
+  ctx.fillRect(cx - 3, cy - 3, 6, 6);
+
+  for (let ringIdx = 0; ringIdx < rings.length; ringIdx++) {
+    const baseR = rings[ringIdx];
+    ctx.beginPath();
+    const steps = shape === 'circle' ? 72 : 80;
+    for (let i = 0; i <= steps; i++) {
+      const theta = (i / steps) * Math.PI * 2;
+      const r = baseR * getRadiusModifier(theta, shape);
+      const x = cx + Math.cos(theta) * r;
+      const y = cy + Math.sin(theta) * r;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = targetLane === ringIdx ? pal.ink : pal.borderSoft;
+    ctx.lineWidth = targetLane === ringIdx ? 2 : 1.5;
     ctx.stroke();
   }
 
   for (const obj of objects) {
-    const r = rings[obj.ring];
+    const rBase = rings[Math.round(obj.ring)] || rings[0];
+    const r = rBase * getRadiusModifier(obj.a, shape);
     const x = cx + Math.cos(obj.a) * r;
     const y = cy + Math.sin(obj.a) * r;
-    ctx.fillStyle = obj.type === 'hazard' ? pal.accent : pal.ink;
-    ctx.fillRect(x - 6, y - 6, 12, 12);
+
+    // Opacidad suave al entrar o salir por detrás del jugador
+    const relAngle = (obj.a - angle) * direction;
+    ctx.globalAlpha = relAngle < 0 ? Math.max(0, 1 + relAngle * 2.2) : 1;
+
+    if (obj.type === 'hazard') {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(obj.a + Math.PI / 4);
+      ctx.fillStyle = pal.accent;
+      ctx.fillRect(-7.5, -7.5, 15, 15);
+      ctx.restore();
+    } else if (obj.type === 'spark') {
+      ctx.fillStyle = pal.bg;
+      ctx.strokeStyle = pal.ink;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, y, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = pal.ink;
+      ctx.fillRect(x - 8, y - 8, 16, 16);
+      ctx.fillStyle = pal.bg;
+      ctx.font = '700 9px "DM Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const letter = obj.type === 'shield' ? 'E' : (obj.type === 'magnet' ? 'I' : 'L');
+      ctx.fillText(letter, x, y);
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // Estela
+  for (let i = 0; i < trail.length; i++) {
+    const t = trail[i];
+    ctx.globalAlpha = t.alpha * 0.35;
+    ctx.fillStyle = State.equippedTrail === 'accent' ? pal.accent : pal.ink;
+    if (State.equippedTrail === 'dots') {
+      if (i % 2 === 0) ctx.fillRect(t.x - 2, t.y - 2, 4, 4);
+    } else {
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // Jugador
+  const playerR = currentRadius * getRadiusModifier(angle, shape);
+  const px = cx + Math.cos(angle) * playerR;
+  const py = cy + Math.sin(angle) * playerR;
+  drawNodeShape(px, py, angle + Math.PI / 2, pal);
+
+  if (shieldActive) {
+    ctx.strokeStyle = pal.accent;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.arc(px, py, 14, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
   }
 
-  const px = cx + Math.cos(angle) * currentRadius;
-  const py = cy + Math.sin(angle) * currentRadius;
-  ctx.fillStyle = pal.ink;
-  ctx.beginPath(); ctx.arc(px, py, 7.5, 0, Math.PI * 2); ctx.fill();
+  for (const p of particles) {
+    ctx.globalAlpha = Math.max(0, p.life / p.max);
+    ctx.fillStyle = p.isAccent ? pal.accent : pal.ink;
+    ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+  }
+  ctx.globalAlpha = 1;
+
+  for (const ft of floatTexts) {
+    ctx.save();
+    ctx.font = '700 11px "DM Mono", monospace';
+    ctx.fillStyle = ft.isAccent ? pal.accent : pal.ink;
+    ctx.globalAlpha = ft.alpha;
+    ctx.textAlign = 'center';
+    ctx.fillText(ft.text, ft.x, ft.y);
+    ctx.restore();
+  }
+
+  ctx.restore();
 }
 
 function frame(now) {
