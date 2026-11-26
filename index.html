@@ -3,19 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#090b18">
-  <title>Órbita Multiverso</title>
+  <meta name="theme-color" content="#f4f4f1">
+  <title>Bento Game</title>
   
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%23090b18'/><ellipse cx='50' cy='50' rx='40' ry='18' fill='none' stroke='%23343958' stroke-width='3' transform='rotate(-28 50 50)'/><circle cx='50' cy='50' r='9' fill='%23ffffff'/><circle cx='80' cy='34' r='7' fill='%236df7e8'/><circle cx='20' cy='66' r='5' fill='%23ff5b87'/></svg>">
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%23090b18'/><ellipse cx='50' cy='50' rx='40' ry='18' fill='none' stroke='%23343958' stroke-width='3' transform='rotate(-28 50 50)'/><circle cx='50' cy='50' r='9' fill='%23ffffff'/><circle cx='80' cy='34' r='7' fill='%236df7e8'/><circle cx='20' cy='66' r='5' fill='%23ff5b87'/></svg>">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23f4f4f1'/><rect x='14' y='14' width='32' height='32' fill='none' stroke='%23141414' stroke-width='6'/><rect x='54' y='14' width='32' height='32' fill='%23141414'/><rect x='14' y='54' width='32' height='32' fill='none' stroke='%23141414' stroke-width='6'/><rect x='54' y='54' width='32' height='32' fill='%23d9381e'/></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23f4f4f1'/><rect x='14' y='14' width='32' height='32' fill='none' stroke='%23141414' stroke-width='6'/><rect x='54' y='14' width='32' height='32' fill='%23141414'/><rect x='14' y='54' width='32' height='32' fill='none' stroke='%23141414' stroke-width='6'/><rect x='54' y='54' width='32' height='32' fill='%23d9381e'/></svg>">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=2.8.0">
+  <link rel="stylesheet" href="style.css?v=3.0.0">
 </head>
 <body>
   <main class="game-shell">
-    <canvas id="game" aria-label="Juego Órbita"></canvas>
+    <canvas id="game" aria-label="Bento Game"></canvas>
     
-    <!-- Barra superior de juego -->
+    <!-- Barra superior de juego (solo visible en partida) -->
     <header class="topbar" id="game-topbar" aria-live="polite" hidden>
       <div class="score-wrap">
         <span class="eyebrow" id="score-label">PUNTOS</span>
@@ -25,8 +25,8 @@
         </div>
       </div>
       <div class="meta-wrap">
-        <span class="eyebrow">FOTONES</span>
-        <strong id="hud-photons" style="color:var(--yellow)">0 ✦</strong>
+        <span class="eyebrow">FICHAS</span>
+        <strong id="hud-photons" class="accent-text">0</strong>
       </div>
       <div class="meta-wrap">
         <span class="eyebrow">TIEMPO</span>
@@ -41,67 +41,81 @@
     </header>
 
     <div class="powerup-hud" id="powerup-hud">
-      <div id="hud-shield" class="hud-item" hidden>🛡️ ESCUDO</div>
-      <div id="hud-magnet" class="hud-item" hidden>🧲 IMÁN</div>
-      <div id="hud-slow" class="hud-item" hidden>⏳ RELENTIZAR</div>
-    </div>
-
-    <!-- Controles en pantalla para modo Constelación -->
-    <div id="const-controls" class="const-controls" hidden>
-      <div id="joystick-zone" class="joystick-zone">
-        <div id="joystick-base" class="joystick-base">
-          <div id="joystick-knob" class="joystick-knob"></div>
-        </div>
-      </div>
-      <button id="boost-btn" class="boost-btn" type="button">TURBO</button>
+      <div id="hud-shield" class="hud-item" hidden>[ ESCUDO ]</div>
+      <div id="hud-magnet" class="hud-item" hidden>[ IMÁN ]</div>
+      <div id="hud-slow" class="hud-item" hidden>[ LENTO ]</div>
     </div>
 
     <!-- Menú de Pausa -->
     <section id="pause-modal" class="modal-box pause-modal" hidden>
       <div class="modal-head">
         <div>
-          <span class="eyebrow">PARTIDA DETENIDA</span>
-          <h2>Pausa</h2>
+          <span class="eyebrow">SISTEMA EN ESPERA</span>
+          <h2>PAUSA</h2>
         </div>
       </div>
-      <p class="pause-desc">El universo se ha congelado temporalmente.</p>
+      <p class="pause-desc">Simulación detenida temporalmente.</p>
       <div class="pause-actions">
-        <button id="resume-btn" class="primary-btn" type="button">CONTINUAR <span>▶</span></button>
+        <button id="resume-btn" class="primary-btn" type="button">CONTINUAR <span>→</span></button>
         <button id="quit-btn" class="board-trigger quit-trigger" type="button">SALIR AL MENÚ</button>
       </div>
     </section>
 
-    <!-- Menú Central -->
+    <!-- Menú Principal Estilo Bentokit -->
     <div class="center-ui" id="overlay">
-      <div class="brand-logo" aria-hidden="true">
-        <svg viewBox="0 0 120 120" class="logo-svg">
-          <ellipse cx="60" cy="60" rx="46" ry="21" class="logo-orbit sub-orbit" transform="rotate(38 60 60)"/>
-          <circle cx="60" cy="60" r="14" class="logo-core-halo"/>
-          <circle cx="60" cy="60" r="7" class="logo-core-sphere"/>
-          <g class="rotating-group">
-            <ellipse cx="60" cy="60" rx="48" ry="22" class="logo-orbit main-orbit" transform="rotate(-28 60 60)"/>
-            <circle cx="98" cy="40" r="6" class="sat-cyan"/>
-            <circle cx="22" cy="80" r="4.5" class="sat-pink"/>
-          </g>
-        </svg>
-      </div>
-
-      <div class="wallet-badge" id="menu-photons">0 ✦ FOTONES</div>
-      <p class="eyebrow" id="eyebrow">UN JUEGO DE REFLEJOS</p>
-      <h1 id="headline">Órbita</h1>
-      <p id="subline">Salta entre anillos.<br>Recoge luz. Esquiva las anomalías.</p>
-
-      <div class="mode-selector">
-        <span class="eyebrow">MODALIDAD</span>
-        <div class="btn-group" id="mode-group">
-          <button type="button" class="opt-btn active" data-mode="classic">CLÁSICO</button>
-          <button type="button" class="opt-btn" data-mode="evolution">EVOLUCIÓN</button>
-          <button type="button" class="opt-btn" data-mode="constellation">CONSTELACIÓN</button>
+      <div class="bento-header">
+        <div class="bento-brand">
+          <svg viewBox="0 0 44 44" class="bento-logo-svg" aria-hidden="true">
+            <rect x="2" y="2" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5"/>
+            <rect x="25" y="2" width="17" height="17" fill="currentColor"/>
+            <rect x="2" y="25" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5"/>
+            <rect x="25" y="25" width="17" height="17" fill="var(--accent)"/>
+          </svg>
+          <div class="bento-titles">
+            <h1><span>BENTO</span> GAME</h1>
+            <p class="eyebrow">ARCADE MINIMALISTA LOCAL</p>
+          </div>
         </div>
+        <div class="wallet-badge" id="menu-photons">0 FICHAS</div>
       </div>
 
-      <div class="diff-selector" id="diff-container" hidden>
-        <span class="eyebrow">DIFICULTAD Y RECOMPENSA</span>
+      <div class="bento-divider"></div>
+
+      <p class="result-banner" id="result-banner" hidden></p>
+
+      <!-- Tarjetas de Selección de Juego -->
+      <div class="bento-cards" id="mode-group">
+        <button type="button" class="bento-card active" data-mode="classic">
+          <div class="card-top">
+            <span class="card-num">01 · CLÁSICO</span>
+            <span class="card-tag">1 TOQUE</span>
+          </div>
+          <strong>BENTO ÓRBITA</strong>
+          <small>Cambia de anillo, recoge nodos y esquiva bloqueos.</small>
+        </button>
+
+        <button type="button" class="bento-card" data-mode="evolution">
+          <div class="card-top">
+            <span class="card-num">02 · PROGRESIVO</span>
+            <span class="card-tag">NIVELES</span>
+          </div>
+          <strong>BENTO EVOLUCIÓN</strong>
+          <small>3 anillos, geometrías dinámicas, mejoras e inversión.</small>
+        </button>
+
+        <button type="button" class="bento-card" data-mode="sequence">
+          <div class="card-top">
+            <span class="card-num">03 · PRECISIÓN</span>
+            <span class="card-tag">NUEVO</span>
+          </div>
+          <strong>BENTO SECUENCIA</strong>
+          <small>Detén el puntero dentro del sector marcado para subir de nivel.</small>
+        </button>
+      </div>
+
+      <!-- Selector de Dificultad -->
+      <div class="diff-selector" id="diff-container">
+        <span class="eyebrow">DIFICULTAD Y MULTIPLICADOR</span>
         <div class="btn-group" id="diff-group">
           <button type="button" class="opt-btn active" data-diff="easy">FÁCIL (1x)</button>
           <button type="button" class="opt-btn" data-diff="normal">NORMAL (1.5x)</button>
@@ -109,42 +123,33 @@
         </div>
       </div>
 
-      <div class="control-selector" id="control-container" hidden>
-        <span class="eyebrow">CONTROL CONSTELACIÓN</span>
-        <div class="btn-group" id="control-group">
-          <button type="button" class="opt-btn active" data-control="follow">SEGUIR DEDO</button>
-          <button type="button" class="opt-btn" data-control="joystick">JOYSTICK</button>
-        </div>
-      </div>
-
       <div class="menu-actions">
-        <button id="start" class="primary-btn" type="button">EMPEZAR <span>↗</span></button>
+        <button id="start" class="primary-btn" type="button">INICIAR PARTIDA <span>↗</span></button>
         <div class="sub-actions">
-          <button id="open-board" class="board-trigger" type="button">VER HISTORIAL</button>
-          <button id="open-shop" class="board-trigger shop-trigger" type="button">TIENDA ✦</button>
+          <button id="open-board" class="board-trigger" type="button">HISTORIAL</button>
+          <button id="open-shop" class="board-trigger shop-trigger" type="button">TIENDA</button>
         </div>
       </div>
-      <small id="hint">TOCA EN CUALQUIER LUGAR PARA CAMBIAR DE ANILLO</small>
     </div>
 
-    <!-- Tienda Expandida -->
+    <!-- Tienda Minimalista -->
     <section id="shop-modal" class="modal-box" hidden>
       <div class="modal-head">
         <div>
-          <span class="eyebrow">HANGAR ORBITAL</span>
-          <h2>Tienda</h2>
+          <span class="eyebrow">PERSONALIZACIÓN</span>
+          <h2>TIENDA</h2>
         </div>
         <button id="close-shop" class="close-board" type="button" aria-label="Cerrar">×</button>
       </div>
-      <div class="shop-wallet">SALDO DISPONIBLE: <strong id="shop-photons">0</strong> ✦</div>
+      <div class="shop-wallet">SALDO: <strong id="shop-photons">0</strong> FICHAS</div>
       
-      <span class="eyebrow shop-category-title">DISEÑOS DE NAVE</span>
+      <span class="eyebrow shop-category-title">FORMA DEL NODO</span>
       <div class="shop-grid" id="skin-grid"></div>
 
-      <span class="eyebrow shop-category-title">ESTELAS / EFECTOS</span>
+      <span class="eyebrow shop-category-title">TRAZO / ESTELA</span>
       <div class="shop-grid" id="trail-grid"></div>
 
-      <span class="eyebrow shop-category-title">TEMAS DE COLOR</span>
+      <span class="eyebrow shop-category-title">PAPEL / TEMA</span>
       <div class="shop-grid" id="theme-grid"></div>
     </section>
 
@@ -152,62 +157,62 @@
     <section id="update-modal" class="modal-box" hidden>
       <div class="modal-head">
         <div>
-          <span class="eyebrow" id="update-tag">VERSIÓN 2.8.0</span>
-          <h2>¡Novedades del Hangar!</h2>
+          <span class="eyebrow" id="update-tag">VERSIÓN 3.0.0</span>
+          <h2>BENTO GAME</h2>
         </div>
       </div>
       <div class="update-body">
         <ul id="update-list">
-          <li><strong>Multiplicador x2:</strong> Juega en modo Extremo para ganar el doble de puntos y fotones.</li>
-          <li><strong>Tienda Expandida:</strong> Nuevas naves cósmicas y efectos de estela para desbloquear.</li>
-          <li><strong>Interfaz Limpia:</strong> Se eliminan por completo los restos gráficos de partidas anteriores en el menú.</li>
-          <li><strong>Optimización Completa:</strong> Menú de pausa y controles más ágiles.</li>
+          <li><strong>Rediseño Bentokit:</strong> Interfaz limpia de alto contraste en papel claro y tinta negra.</li>
+          <li><strong>Nuevo Modo Secuencia:</strong> Juego de precisión rítmica por niveles y dificultad.</li>
+          <li><strong>Modo Evolución:</strong> Multiplicadores x1.5 y x2, 3 carriles y formas geométricas.</li>
+          <li><strong>Enfoque Minimalista:</strong> Eliminado el modo abierto para centrarse en reflejos puros.</li>
         </ul>
       </div>
       <label class="modal-check">
         <input type="checkbox" id="dont-show-check">
         <span>No volver a mostrar esta versión</span>
       </label>
-      <button id="close-update" class="primary-btn update-close-btn" type="button">ENTENDIDO</button>
+      <button id="close-update" class="primary-btn update-close-btn" type="button">CONTINUAR</button>
     </section>
 
     <!-- Historial de Intentos -->
     <section id="board" class="board" aria-label="Tabla de intentos" hidden>
       <div class="board-head">
         <div>
-          <span class="eyebrow">TU HISTORIAL</span>
-          <h2>Récords</h2>
+          <span class="eyebrow">REGISTRO LOCAL</span>
+          <h2>HISTORIAL</h2>
         </div>
         <button id="close-board" class="close-board" type="button" aria-label="Cerrar">×</button>
       </div>
 
       <div class="board-filter-group" id="board-filters">
         <button type="button" class="filter-btn active" data-filter="all">TODOS</button>
-        <button type="button" class="filter-btn" data-filter="classic">CLÁSICO</button>
+        <button type="button" class="filter-btn" data-filter="classic">ÓRBITA</button>
         <button type="button" class="filter-btn" data-filter="evolution">EVOLUCIÓN</button>
-        <button type="button" class="filter-btn" data-filter="constellation">CONSTELACIÓN</button>
+        <button type="button" class="filter-btn" data-filter="sequence">SECUENCIA</button>
       </div>
 
       <div class="board-columns">
-        <span>MODO / INFO</span>
+        <span>MODO / NIVEL</span>
         <span>PUNTOS</span>
         <span>TIEMPO</span>
       </div>
       <ol id="run-list" class="run-list"></ol>
-      <p id="empty-board" class="empty-board">Aún no hay intentos registrados.</p>
+      <p id="empty-board" class="empty-board">Aún no hay partidas registradas.</p>
     </section>
 
     <footer class="bottom-ui">
       <span id="level">NIVEL 01</span>
       <span class="sound-dot"></span>
-      <span id="status">LISTA PARA DESPEGAR</span>
+      <span id="status">OFFLINE · LISTO</span>
     </footer>
 
     <div id="flash" class="flash"></div>
-    <div id="reverse-banner" class="alert-banner">¡INVERSIÓN!</div>
+    <div id="reverse-banner" class="alert-banner">INVERSIÓN</div>
   </main>
 
-  <script src="game.js?v=2.8.0"></script>
+  <script src="game.js?v=3.0.0"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
