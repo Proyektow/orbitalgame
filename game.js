@@ -1,5 +1,5 @@
-// CONTROL DE VERSIÓN: 2.8.0 (Multiplicador x2, Limpieza de fondo en menú y Tienda expandida)
-const CURRENT_VERSION = '2.8.0';
+// BENTO GAME v3.0.0 - Estética Bentokit Minimalista + Modo Secuencia
+const CURRENT_VERSION = '3.0.0';
 
 const canvas = document.querySelector('#game');
 const ctx = canvas.getContext('2d');
@@ -17,6 +17,7 @@ const timerEl = document.querySelector('#timer');
 const hudPhotonsEl = document.querySelector('#hud-photons');
 const menuPhotonsEl = document.querySelector('#menu-photons');
 const shopPhotonsEl = document.querySelector('#shop-photons');
+const resultBanner = document.querySelector('#result-banner');
 
 const pauseBtn = document.querySelector('#pause-btn');
 const pauseModal = document.querySelector('#pause-modal');
@@ -29,14 +30,6 @@ const emptyBoardEl = document.querySelector('#empty-board');
 const flashEl = document.querySelector('#flash');
 const shell = document.querySelector('.game-shell');
 const reverseBanner = document.querySelector('#reverse-banner');
-const diffContainer = document.querySelector('#diff-container');
-const controlContainer = document.querySelector('#control-container');
-
-// Elementos de Control Modo Constelación
-const constControls = document.querySelector('#const-controls');
-const joystickZone = document.querySelector('#joystick-zone');
-const joystickKnob = document.querySelector('#joystick-knob');
-const boostBtn = document.querySelector('#boost-btn');
 
 // Tienda
 const shopModal = document.querySelector('#shop-modal');
@@ -52,60 +45,27 @@ const hudMagnet = document.querySelector('#hud-magnet');
 const hudSlow = document.querySelector('#hud-slow');
 
 // ==========================================
-// AUDIO SYNTHWAVE PROCEDURAL
+// PALETA DINÁMICA PARA CANVAS
+// ==========================================
+function getPalette() {
+  const styles = getComputedStyle(document.body);
+  return {
+    bg: styles.getPropertyValue('--bg').trim() || '#f4f4f1',
+    ink: styles.getPropertyValue('--ink').trim() || '#141414',
+    muted: styles.getPropertyValue('--muted').trim() || '#666662',
+    borderSoft: styles.getPropertyValue('--border-soft').trim() || '#d5d5d0',
+    accent: styles.getPropertyValue('--accent').trim() || '#d9381e'
+  };
+}
+
+// ==========================================
+// AUDIO MINIMALISTA PROCEDURAL (CLICK / BEEP)
 // ==========================================
 let audioCtx = null;
-let musicInterval = null;
-let bassStep = 0;
-const bassNotes = [110, 110, 130.81, 146.83, 164.81, 146.83, 130.81, 98];
 
 function initAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if (audioCtx.state === 'suspended') audioCtx.resume();
-}
-
-function startMusic() {
-  stopMusic();
-  bassStep = 0;
-  const stepTime = (60 / 125) / 2 * 1000;
-  musicInterval = setInterval(() => {
-    if (mode === 'playing') playBassTone();
-  }, stepTime);
-}
-
-function stopMusic() {
-  if (musicInterval) {
-    clearInterval(musicInterval);
-    musicInterval = null;
-  }
-}
-
-function playBassTone() {
-  try {
-    initAudio();
-    const now = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    const filter = audioCtx.createBiquadFilter();
-
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(bassNotes[bassStep % bassNotes.length], now);
-
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(450, now);
-    filter.frequency.exponentialRampToValueAtTime(120, now + 0.16);
-
-    gain.gain.setValueAtTime(0.06, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    osc.start(now);
-    osc.stop(now + 0.18);
-    bassStep++;
-  } catch {}
 }
 
 function playSound(type) {
@@ -117,30 +77,38 @@ function playSound(type) {
     osc.connect(gain);
     gain.connect(audioCtx.destination);
 
-    if (type === 'switch' || type === 'jump') {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(320, now);
-      osc.frequency.exponentialRampToValueAtTime(640, now + 0.08);
-      gain.gain.setValueAtTime(0.09, now);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.08);
-      osc.start(now);
-      osc.stop(now + 0.08);
-    } else if (type === 'collect') {
+    if (type === 'switch') {
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(587.33, now);
-      osc.frequency.setValueAtTime(880, now + 0.06);
-      gain.gain.setValueAtTime(0.12, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(660, now + 0.05);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.linearRampToValueAtTime(0.001, now + 0.05);
       osc.start(now);
-      osc.stop(now + 0.16);
+      osc.stop(now + 0.05);
+    } else if (type === 'collect' || type === 'lock') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(660, now);
+      osc.frequency.setValueAtTime(880, now + 0.04);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    } else if (type === 'powerup') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, now);
+      osc.frequency.exponentialRampToValueAtTime(1046.5, now + 0.18);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.linearRampToValueAtTime(0.001, now + 0.18);
+      osc.start(now);
+      osc.stop(now + 0.18);
     } else if (type === 'hit') {
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(140, now);
-      osc.frequency.exponentialRampToValueAtTime(35, now + 0.3);
-      gain.gain.setValueAtTime(0.2, now);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.3);
+      osc.frequency.setValueAtTime(150, now);
+      osc.frequency.exponentialRampToValueAtTime(45, now + 0.22);
+      gain.gain.setValueAtTime(0.16, now);
+      gain.gain.linearRampToValueAtTime(0.001, now + 0.22);
       osc.start(now);
-      osc.stop(now + 0.3);
+      osc.stop(now + 0.22);
     }
   } catch {}
 }
@@ -150,43 +118,41 @@ function vibrate(pattern) {
 }
 
 // ==========================================
-// TIENDA EXPANDIDA Y ECONOMÍA (FOTONES)
+// TIENDA Y ECONOMÍA (FICHAS BENTO)
 // ==========================================
-let photons = Number(localStorage.getItem('orbita-photons') || 0);
-let equippedSkin = localStorage.getItem('orbita-skin') || 'core';
-let equippedTrail = localStorage.getItem('orbita-trail') || 'cyan';
-let equippedTheme = localStorage.getItem('orbita-theme') || 'default';
+let photons = Number(localStorage.getItem('bento-photons') || 0);
+let equippedSkin = localStorage.getItem('bento-skin') || 'dot';
+let equippedTrail = localStorage.getItem('bento-trail') || 'solid';
+let equippedTheme = localStorage.getItem('bento-theme') || 'default';
 
-let ownedSkins = JSON.parse(localStorage.getItem('orbita-owned-skins') || '["core"]');
-let ownedTrails = JSON.parse(localStorage.getItem('orbita-owned-trails') || '["cyan"]');
-let ownedThemes = JSON.parse(localStorage.getItem('orbita-owned-themes') || '["default"]');
+let ownedSkins = JSON.parse(localStorage.getItem('bento-owned-skins') || '["dot"]');
+let ownedTrails = JSON.parse(localStorage.getItem('bento-owned-trails') || '["solid"]');
+let ownedThemes = JSON.parse(localStorage.getItem('bento-owned-themes') || '["default"]');
 
 const SKINS = [
-  { id: 'core', name: 'Núcleo', price: 0, icon: '⚪' },
-  { id: 'pulse', name: 'Triángulo', price: 80, icon: '▲' },
-  { id: 'vortex', name: 'Vórtice', price: 150, icon: '🌀' },
-  { id: 'phoenix', name: 'Fénix', price: 250, icon: '🔥' },
-  { id: 'nova', name: 'Anillo Nova', price: 350, icon: '🪐' }
+  { id: 'dot', name: 'Punto', price: 0, icon: '●' },
+  { id: 'square', name: 'Bloque', price: 60, icon: '■' },
+  { id: 'diamond', name: 'Rombo', price: 120, icon: '◆' },
+  { id: 'ring', name: 'Aro', price: 200, icon: '◎' },
+  { id: 'cross', name: 'Cruz', price: 300, icon: '✚' }
 ];
 
 const TRAILS = [
-  { id: 'cyan', name: 'Plasma Cian', price: 0, color: '#6df7e8' },
-  { id: 'fire', name: 'Fuego Solar', price: 90, color: '#ff9100' },
-  { id: 'rainbow', name: 'Neón Iris', price: 180, color: '#bd93f9' },
-  { id: 'glitch', name: 'Glitch Rosa', price: 260, color: '#ff5b87' }
+  { id: 'solid', name: 'Tinta', price: 0 },
+  { id: 'accent', name: 'Bermellón', price: 80 },
+  { id: 'dots', name: 'Punteado', price: 150 }
 ];
 
 const THEMES = [
-  { id: 'default', name: 'Neón Puro', price: 0, class: '' },
-  { id: 'vaporwave', name: 'Vaporwave', price: 100, class: 'theme-vaporwave' },
-  { id: 'cyberpunk', name: 'Cyberpunk', price: 180, class: 'theme-cyberpunk' },
-  { id: 'solar', name: 'Infierno Solar', price: 280, class: 'theme-solar' }
+  { id: 'default', name: 'Papel Claro', price: 0, class: '' },
+  { id: 'blueprint', name: 'Plano Azul', price: 120, class: 'theme-blueprint' },
+  { id: 'terminal', name: 'Tinta Oscura', price: 220, class: 'theme-terminal' }
 ];
 
 function updateWalletUI() {
-  localStorage.setItem('orbita-photons', photons);
-  hudPhotonsEl.textContent = `${photons} ✦`;
-  menuPhotonsEl.textContent = `${photons} ✦ FOTONES`;
+  localStorage.setItem('bento-photons', photons);
+  hudPhotonsEl.textContent = `${photons}`;
+  menuPhotonsEl.textContent = `${photons} FICHAS`;
   shopPhotonsEl.textContent = photons;
 }
 
@@ -205,9 +171,9 @@ function renderShop() {
     const eq = equippedSkin === s.id;
     return `
       <div class="shop-item ${owned ? 'owned' : ''} ${eq ? 'equipped' : ''}" data-buy-skin="${s.id}">
-        <span style="font-size:18px">${s.icon}</span>
+        <span style="font-size:16px">${s.icon}</span>
         <span class="shop-item-name">${s.name}</span>
-        <span class="shop-item-price">${eq ? 'EQUIPADO' : (owned ? 'USAR' : s.price + ' ✦')}</span>
+        <span class="shop-item-price">${eq ? 'EN USO' : (owned ? 'USAR' : s.price)}</span>
       </div>
     `;
   }).join('');
@@ -217,9 +183,8 @@ function renderShop() {
     const eq = equippedTrail === t.id;
     return `
       <div class="shop-item ${owned ? 'owned' : ''} ${eq ? 'equipped' : ''}" data-buy-trail="${t.id}">
-        <span style="width:12px;height:12px;border-radius:50%;background:${t.color};display:inline-block"></span>
         <span class="shop-item-name">${t.name}</span>
-        <span class="shop-item-price">${eq ? 'EQUIPADO' : (owned ? 'USAR' : t.price + ' ✦')}</span>
+        <span class="shop-item-price">${eq ? 'EN USO' : (owned ? 'USAR' : t.price)}</span>
       </div>
     `;
   }).join('');
@@ -230,7 +195,7 @@ function renderShop() {
     return `
       <div class="shop-item ${owned ? 'owned' : ''} ${eq ? 'equipped' : ''}" data-buy-theme="${t.id}">
         <span class="shop-item-name">${t.name}</span>
-        <span class="shop-item-price">${eq ? 'EQUIPADO' : (owned ? 'USAR' : t.price + ' ✦')}</span>
+        <span class="shop-item-price">${eq ? 'EN USO' : (owned ? 'USAR' : t.price)}</span>
       </div>
     `;
   }).join('');
@@ -243,13 +208,13 @@ skinGrid.addEventListener('click', (e) => {
   const skin = SKINS.find(s => s.id === id);
   if (ownedSkins.includes(id)) {
     equippedSkin = id;
-    localStorage.setItem('orbita-skin', id);
+    localStorage.setItem('bento-skin', id);
   } else if (photons >= skin.price) {
     photons -= skin.price;
     ownedSkins.push(id);
     equippedSkin = id;
-    localStorage.setItem('orbita-skin', id);
-    localStorage.setItem('orbita-owned-skins', JSON.stringify(ownedSkins));
+    localStorage.setItem('bento-skin', id);
+    localStorage.setItem('bento-owned-skins', JSON.stringify(ownedSkins));
   }
   renderShop();
 });
@@ -258,16 +223,16 @@ trailGrid.addEventListener('click', (e) => {
   const item = e.target.closest('[data-buy-trail]');
   if (!item) return;
   const id = item.dataset.buyTrail;
-  const trailObj = TRAILS.find(t => t.id === id);
+  const tr = TRAILS.find(t => t.id === id);
   if (ownedTrails.includes(id)) {
     equippedTrail = id;
-    localStorage.setItem('orbita-trail', id);
-  } else if (photons >= trailObj.price) {
-    photons -= trailObj.price;
+    localStorage.setItem('bento-trail', id);
+  } else if (photons >= tr.price) {
+    photons -= tr.price;
     ownedTrails.push(id);
     equippedTrail = id;
-    localStorage.setItem('orbita-trail', id);
-    localStorage.setItem('orbita-owned-trails', JSON.stringify(ownedTrails));
+    localStorage.setItem('bento-trail', id);
+    localStorage.setItem('bento-owned-trails', JSON.stringify(ownedTrails));
   }
   renderShop();
 });
@@ -279,14 +244,14 @@ themeGrid.addEventListener('click', (e) => {
   const theme = THEMES.find(t => t.id === id);
   if (ownedThemes.includes(id)) {
     equippedTheme = id;
-    localStorage.setItem('orbita-theme', id);
+    localStorage.setItem('bento-theme', id);
     applyTheme(id);
   } else if (photons >= theme.price) {
     photons -= theme.price;
     ownedThemes.push(id);
     equippedTheme = id;
-    localStorage.setItem('orbita-theme', id);
-    localStorage.setItem('orbita-owned-themes', JSON.stringify(ownedThemes));
+    localStorage.setItem('bento-theme', id);
+    localStorage.setItem('bento-owned-themes', JSON.stringify(ownedThemes));
     applyTheme(id);
   }
   renderShop();
@@ -296,16 +261,15 @@ openShopBtn.addEventListener('click', (e) => { e.stopPropagation(); renderShop()
 closeShopBtn.addEventListener('click', (e) => { e.stopPropagation(); shopModal.hidden = true; });
 
 // ==========================================
-// VARIABLES DE PARTIDA Y RENDER
+// VARIABLES DE JUEGO
 // ==========================================
-let selectedMode = 'classic';
-let selectedDiff = 'easy';
-let selectedControl = localStorage.getItem('orbita-control') || 'follow';
+let selectedMode = 'classic'; // 'classic' | 'evolution' | 'sequence'
+let selectedDiff = 'easy';    // 'easy' | 'normal' | 'hard'
 let activeFilter = 'all';
 
 let w = 0, h = 0, dpr = 1, cx = 0, cy = 0;
 let rings = [];
-let mode = 'ready'; // 'ready', 'playing', 'paused', 'over'
+let mode = 'ready'; // 'ready' | 'playing' | 'paused' | 'over'
 let angle = -Math.PI / 2;
 let targetLane = 0;
 let currentRadius = 0; 
@@ -313,41 +277,28 @@ let score = 0, streak = 0, elapsed = 0, spawnClock = 0, lastTime = 0, shake = 0,
 let direction = 1;
 let reverseTimer = 0;
 let trail = [];
-
 let scoreMultiplier = 1;
 
+// Power-ups (Modo Evolución)
 let shieldActive = false;
 let magnetTimer = 0;
 let slowTimer = 0;
 let objects = [], particles = [], floatTexts = [];
 
-// Modo Constelación
-const MAP_SIZE = 1800;
-let playerSnake = null;
-let bots = [];
-let foodOrbs = [];
-let isBoosting = false;
-let joystickVec = { x: 0, y: 0 };
-let joyActive = false;
-let joyCenter = { x: 0, y: 0 };
-let joyPointerId = null;
+// Variables específicas de 03 · BENTO SECUENCIA (Precisión por niveles)
+let seqTargetAngle = 0;
+let seqArcWidth = 0.65;
+let seqHitsInLevel = 0;
+let seqLocks = []; // Marcas fijadas en el anillo
 
 // Persistencia
-let best = Number(localStorage.getItem('orbita-best') || 0);
-let attemptCount = Number(localStorage.getItem('orbita-attempts') || 0);
+let best = Number(localStorage.getItem('bento-best') || 0);
+let attemptCount = Number(localStorage.getItem('bento-attempts') || 0);
 let runs = [];
-try { runs = JSON.parse(localStorage.getItem('orbita-runs') || '[]'); } catch { runs = []; }
+try { runs = JSON.parse(localStorage.getItem('bento-runs') || '[]'); } catch { runs = []; }
 
 bestEl.textContent = best;
 updateWalletUI();
-
-const stars = Array.from({ length: 65 }, () => ({
-  x: Math.random(),
-  y: Math.random(),
-  r: Math.random() * 1.3 + 0.3,
-  a: Math.random() * 0.45 + 0.15,
-  phase: Math.random() * Math.PI * 2
-}));
 
 function resize() {
   dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -356,13 +307,13 @@ function resize() {
   canvas.width = Math.round(w * dpr);
   canvas.height = Math.round(h * dpr);
   cx = w / 2;
-  cy = h * 0.51;
+  cy = h * 0.50;
 
   const baseOuter = Math.min(w, h) * 0.34;
   if (selectedMode === 'evolution' && level >= 3) {
-    rings = [baseOuter, baseOuter * 0.73, baseOuter * 0.48];
+    rings = [baseOuter, baseOuter * 0.72, baseOuter * 0.46];
   } else {
-    rings = [baseOuter, baseOuter * 0.67];
+    rings = [baseOuter, baseOuter * 0.65];
   }
 
   if (currentRadius === 0) currentRadius = rings[0];
@@ -370,8 +321,8 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-function spawnFloatText(text, x, y, color = '#6df7e8') {
-  floatTexts.push({ text, x, y, vy: -35, alpha: 1, color });
+function spawnFloatText(text, x, y, isAccent = false) {
+  floatTexts.push({ text, x, y, vy: -30, alpha: 1, isAccent });
 }
 
 function setStreak() {
@@ -382,7 +333,7 @@ function setStreak() {
 setStreak();
 
 function getGeometryType() {
-  if (selectedMode === 'classic') return 'circle';
+  if (selectedMode !== 'evolution') return 'circle';
   if (selectedDiff === 'hard' || level >= 6) return 'octagon';
   if (selectedDiff === 'normal' || level >= 4) return 'hexagon';
   if (level >= 2) return 'ellipse';
@@ -390,21 +341,19 @@ function getGeometryType() {
 }
 
 function getRadiusModifier(theta, shape) {
-  if (shape === 'ellipse') return 1 + 0.18 * Math.cos(2 * theta);
-  if (shape === 'hexagon') return 1 + 0.08 * Math.cos(6 * theta);
-  if (shape === 'octagon') return 1 + 0.1 * Math.cos(8 * theta);
+  if (shape === 'ellipse') return 1 + 0.15 * Math.cos(2 * theta);
+  if (shape === 'hexagon') return 1 + 0.07 * Math.cos(6 * theta);
+  if (shape === 'octagon') return 1 + 0.08 * Math.cos(8 * theta);
   return 1;
 }
 
 // Selectores UI
-document.querySelectorAll('#mode-group .opt-btn').forEach(btn => {
-  btn.addEventListener('click', (e) => {
+document.querySelectorAll('#mode-group .bento-card').forEach(card => {
+  card.addEventListener('click', (e) => {
     e.stopPropagation();
-    document.querySelectorAll('#mode-group .opt-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    selectedMode = btn.dataset.mode;
-    diffContainer.hidden = (selectedMode !== 'evolution');
-    controlContainer.hidden = (selectedMode !== 'constellation');
+    document.querySelectorAll('#mode-group .bento-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+    selectedMode = card.dataset.mode;
   });
 });
 
@@ -414,16 +363,6 @@ document.querySelectorAll('#diff-group .opt-btn').forEach(btn => {
     document.querySelectorAll('#diff-group .opt-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     selectedDiff = btn.dataset.diff;
-  });
-});
-
-document.querySelectorAll('#control-group .opt-btn').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    document.querySelectorAll('#control-group .opt-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    selectedControl = btn.dataset.control;
-    localStorage.setItem('orbita-control', selectedControl);
   });
 });
 
@@ -442,13 +381,20 @@ function formatTime(seconds) {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
 
+function getModeName(m) {
+  if (m === 'classic') return '01 · ÓRBITA';
+  if (m === 'evolution') return '02 · EVOLUCIÓN';
+  if (m === 'sequence') return '03 · SECUENCIA';
+  return m.toUpperCase();
+}
+
 function renderBoard() {
   let filtered = [...runs];
   if (activeFilter !== 'all') filtered = filtered.filter(r => (r.mode || 'classic') === activeFilter);
   const sorted = filtered.sort((a, b) => b.score - a.score || b.seconds - a.seconds).slice(0, 10);
   runListEl.innerHTML = sorted.map(run => `
     <li class="run-row">
-      <span>${(run.mode || 'CLÁSICO').toUpperCase()}<small>${run.mode === 'constellation' ? 'LONGITUD' : 'NIVEL ' + String(run.level).padStart(2, '0')} · #${run.attempt}</small></span>
+      <span>${getModeName(run.mode || 'classic')}<small>NIVEL ${String(run.level).padStart(2, '0')} · #${run.attempt}</small></span>
       <span>${run.score}</span>
       <span>${formatTime(run.seconds)}</span>
     </li>
@@ -456,41 +402,32 @@ function renderBoard() {
   emptyBoardEl.hidden = sorted.length > 0;
 }
 
-function createSnake(x, y, color, isPlayer = false) {
-  const segments = [];
-  for (let i = 0; i < 22; i++) segments.push({ x: x - i * 7, y });
-  return {
-    x, y,
-    angle: isPlayer ? 0 : Math.random() * Math.PI * 2,
-    speed: 140,
-    targetAngle: isPlayer ? 0 : Math.random() * Math.PI * 2,
-    segments,
-    length: 22,
-    color,
-    isPlayer,
-    alive: true,
-    boostClock: 0,
-    aiTimer: Math.random() * 0.5,
-    isBoosting: false
-  };
-}
-
 function cleanGameState() {
   objects = [];
   particles = [];
   trail = [];
-  foodOrbs = [];
-  bots = [];
-  playerSnake = null;
   floatTexts = [];
+  seqLocks = [];
+  shieldActive = false;
+  magnetTimer = 0;
+  slowTimer = 0;
+  hudShield.hidden = true;
+  hudMagnet.hidden = true;
+  hudSlow.hidden = true;
+  reverseBanner.classList.remove('show');
+}
+
+function spawnNextSequenceTarget() {
+  const offset = (Math.PI * 0.65) + Math.random() * (Math.PI * 0.9);
+  seqTargetAngle = angle + offset * direction;
+  const diffShrink = selectedDiff === 'hard' ? 0.72 : (selectedDiff === 'normal' ? 0.85 : 1);
+  seqArcWidth = Math.max(0.24, (0.68 - (level - 1) * 0.045) * diffShrink);
 }
 
 function begin() {
   attemptCount++;
-  localStorage.setItem('orbita-attempts', attemptCount);
+  localStorage.setItem('bento-attempts', attemptCount);
   initAudio();
-  startMusic();
-
   cleanGameState();
 
   mode = 'playing';
@@ -498,75 +435,53 @@ function begin() {
   streak = 0;
   elapsed = 0;
   shake = 0;
+  angle = -Math.PI / 2;
+  direction = 1;
+  targetLane = 0;
+
   scoreEl.textContent = '0';
   timerEl.textContent = '00:00';
   gameTopBar.hidden = false;
   boardEl.hidden = true;
   shopModal.hidden = true;
   pauseModal.hidden = true;
+  resultBanner.hidden = true;
   overlay.classList.add('hidden');
 
-  // Ajuste de Multiplicadores según la dificultad
-  if (selectedMode === 'evolution') {
-    if (selectedDiff === 'hard') {
-      scoreMultiplier = 2.0;
-      multiplierBadge.textContent = 'x2';
-      multiplierBadge.hidden = false;
-    } else if (selectedDiff === 'normal') {
-      scoreMultiplier = 1.5;
-      multiplierBadge.textContent = 'x1.5';
-      multiplierBadge.hidden = false;
-    } else {
-      scoreMultiplier = 1.0;
-      multiplierBadge.hidden = true;
-    }
+  // Multiplicadores por dificultad
+  if (selectedDiff === 'hard') {
+    scoreMultiplier = 2.0;
+    multiplierBadge.textContent = 'x2';
+    multiplierBadge.hidden = false;
+  } else if (selectedDiff === 'normal') {
+    scoreMultiplier = 1.5;
+    multiplierBadge.textContent = 'x1.5';
+    multiplierBadge.hidden = false;
   } else {
     scoreMultiplier = 1.0;
     multiplierBadge.hidden = true;
   }
 
-  if (selectedMode === 'constellation') {
-    scoreLabelEl.textContent = 'LONGITUD';
-    levelEl.textContent = 'ARENA LIBRE';
-    statusEl.textContent = 'SUPERVIVENCIA';
-    streakEl.style.display = 'none';
+  level = selectedDiff === 'hard' ? 3 : (selectedDiff === 'normal' ? 2 : 1);
+  resize();
+  currentRadius = rings[0];
 
-    constControls.hidden = false;
-    joystickZone.style.display = (selectedControl === 'joystick') ? 'block' : 'none';
-
-    playerSnake = createSnake(MAP_SIZE / 2, MAP_SIZE / 2, '#6df7e8', true);
-    bots = [];
-    const botColors = ['#ff5b87', '#bd93f9', '#fdd835', '#ff9a3c', '#50fa7b'];
-    for (let i = 0; i < 5; i++) {
-      bots.push(createSnake(Math.random() * (MAP_SIZE - 300) + 150, Math.random() * (MAP_SIZE - 300) + 150, botColors[i], false));
-    }
-    foodOrbs = [];
-    for (let i = 0; i < 95; i++) {
-      foodOrbs.push({ x: Math.random() * MAP_SIZE, y: Math.random() * MAP_SIZE, r: 2.5 + Math.random() * 2.5, color: Math.random() < 0.6 ? '#6df7e8' : '#ff5b87' });
-    }
-
+  if (selectedMode === 'sequence') {
+    scoreLabelEl.textContent = 'ACIERTOS';
+    streakEl.style.display = 'flex';
+    setStreak();
+    seqHitsInLevel = 0;
+    spawnNextSequenceTarget();
+    levelEl.textContent = 'NIVEL ' + String(level).padStart(2, '0');
+    statusEl.textContent = 'SECUENCIA ACTIVA';
   } else {
     scoreLabelEl.textContent = 'PUNTOS';
     streakEl.style.display = 'flex';
-    constControls.hidden = true;
-    angle = -Math.PI / 2;
-    direction = 1;
-    targetLane = 0;
-    level = selectedMode === 'evolution' && selectedDiff === 'hard' ? 4 : (selectedMode === 'evolution' && selectedDiff === 'normal' ? 2 : 1);
+    setStreak();
     spawnClock = 0.5;
     reverseTimer = 18;
-    shieldActive = false;
-    magnetTimer = 0;
-    slowTimer = 0;
-    hudShield.hidden = true;
-    hudMagnet.hidden = true;
-    hudSlow.hidden = true;
-
-    resize();
-    currentRadius = rings[0];
-    setStreak();
     levelEl.textContent = 'NIVEL ' + String(level).padStart(2, '0');
-    statusEl.textContent = 'SISTEMA ACTIVO';
+    statusEl.textContent = 'ÓRBITA ACTIVA';
   }
 }
 
@@ -576,24 +491,22 @@ function begin() {
 function togglePause() {
   if (mode === 'playing') {
     mode = 'paused';
-    stopMusic();
     pauseModal.hidden = false;
+    statusEl.textContent = 'EN PAUSA';
   } else if (mode === 'paused') {
     mode = 'playing';
-    startMusic();
     pauseModal.hidden = true;
+    statusEl.textContent = selectedMode === 'sequence' ? 'SECUENCIA ACTIVA' : 'ÓRBITA ACTIVA';
   }
 }
 
 function quitToMenu() {
   mode = 'ready';
-  stopMusic();
   cleanGameState();
   pauseModal.hidden = true;
   gameTopBar.hidden = true;
-  constControls.hidden = true;
-  joyActive = false;
-  isBoosting = false;
+  statusEl.textContent = 'OFFLINE · LISTO';
+  levelEl.textContent = 'NIVEL 01';
   overlay.classList.remove('hidden');
 }
 
@@ -604,123 +517,105 @@ quitBtn.addEventListener('click', (e) => { e.stopPropagation(); quitToMenu(); })
 function finish() {
   if (mode !== 'playing') return;
   mode = 'over';
-  shake = 16;
-  stopMusic();
+  shake = 12;
   playSound('hit');
-  vibrate([80, 50, 120]);
-
-  constControls.hidden = true;
-  joyActive = false;
-  isBoosting = false;
+  vibrate([60, 40, 90]);
 
   flashEl.classList.remove('hit');
   void flashEl.offsetWidth;
   flashEl.classList.add('hit');
 
-  statusEl.textContent = 'SEÑAL PERDIDA';
+  statusEl.textContent = 'FIN DE PARTIDA';
   runs.push({ attempt: attemptCount, score, seconds: Math.floor(elapsed), level, mode: selectedMode });
   runs = runs.slice(-40);
-  localStorage.setItem('orbita-runs', JSON.stringify(runs));
+  localStorage.setItem('bento-runs', JSON.stringify(runs));
   renderBoard();
 
   const record = score > best;
   if (record) {
     best = score;
-    localStorage.setItem('orbita-best', best);
+    localStorage.setItem('bento-best', best);
     bestEl.textContent = best;
   }
 
   gameTopBar.hidden = true;
-  document.querySelector('#eyebrow').textContent = record ? '¡NUEVO RÉCORD!' : 'FIN DEL VIAJE';
-  document.querySelector('#headline').textContent = score > 0 ? `${score} luz${score === 1 ? '' : 'es'}` : 'Casi.';
-  
-  const earnedPhotons = Math.floor((score / 4) * scoreMultiplier);
-  document.querySelector('#subline').innerHTML = `Modo ${selectedMode.toUpperCase()} · Tiempo ${formatTime(elapsed)}<br>+${earnedPhotons} Fotones (${scoreMultiplier}x)`;
-  startButton.innerHTML = 'OTRA VUELTA <span>↗</span>';
-  document.querySelector('#hint').textContent = 'TOCA PARA VOLVER A LA ÓRBITA';
-  
+  const earned = Math.max(1, Math.floor((score / 3) * scoreMultiplier));
+  photons += earned;
+
+  resultBanner.innerHTML = `${record ? '<strong>NUEVO RÉCORD</strong> · ' : ''}PUNTOS: <strong>${score}</strong> · +${earned} FICHAS (${scoreMultiplier}x)`;
+  resultBanner.hidden = false;
+  startButton.innerHTML = 'REINTENTAR <span>↗</span>';
+
   cleanGameState();
   updateWalletUI();
   overlay.classList.remove('hidden');
 }
 
 // ==========================================
-// CONTROLES Y JOYSTICK
+// ACCIÓN DE TOQUE EN PARTIDA
 // ==========================================
-function handleTouchDirection(clientX, clientY) {
-  if (!playerSnake || mode !== 'playing') return;
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / (rect.width * dpr);
-  const scaleY = canvas.height / (rect.height * dpr);
-  const touchCenterX = (clientX - rect.left) * scaleX - (w / 2);
-  const touchCenterY = (clientY - rect.top) * scaleY - (h / 2);
-
-  if (Math.hypot(touchCenterX, touchCenterY) > 12) {
-    playerSnake.targetAngle = Math.atan2(touchCenterY, touchCenterX);
-  }
+function angleDiff(a, b) {
+  let d = (a - b) % (Math.PI * 2);
+  if (d < -Math.PI) d += Math.PI * 2;
+  if (d > Math.PI) d -= Math.PI * 2;
+  return d;
 }
 
-joystickZone.addEventListener('pointerdown', (e) => {
-  e.stopPropagation();
-  joyActive = true;
-  joyPointerId = e.pointerId;
-  joystickZone.setPointerCapture(e.pointerId);
-  const rect = joystickZone.getBoundingClientRect();
-  joyCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-  calcJoy(e.clientX, e.clientY);
-});
+function handleAction() {
+  if (mode !== 'playing') return;
 
-joystickZone.addEventListener('pointermove', (e) => {
-  if (joyActive && e.pointerId === joyPointerId) calcJoy(e.clientX, e.clientY);
-});
+  if (selectedMode === 'sequence') {
+    const diff = Math.abs(angleDiff(angle, seqTargetAngle));
+    const r = rings[0];
+    const px = cx + Math.cos(angle) * r;
+    const py = cy + Math.sin(angle) * r;
 
-function calcJoy(px, py) {
-  const dx = px - joyCenter.x;
-  const dy = py - joyCenter.y;
-  const dist = Math.hypot(dx, dy);
-  const maxR = 40;
-  const angle = Math.atan2(dy, dx);
-  const clamp = Math.min(dist, maxR);
-  joystickKnob.style.transform = `translate(${Math.cos(angle) * clamp}px, ${Math.sin(angle) * clamp}px)`;
-  if (dist > 6) {
-    joystickVec = { x: Math.cos(angle), y: Math.sin(angle) };
+    if (diff <= seqArcWidth / 2) {
+      // Acierto dentro del sector
+      streak++;
+      seqHitsInLevel++;
+      const pts = Math.round((1 + Math.floor(streak / 4)) * scoreMultiplier);
+      score += pts;
+      photons += Math.round(1 * scoreMultiplier);
+      scoreEl.textContent = score;
+      setStreak();
+      updateWalletUI();
+      playSound('lock');
+      vibrate(20);
+      burst(px, py, true, 8);
+      spawnFloatText(`+${pts}`, px, py, scoreMultiplier > 1);
+
+      seqLocks.push(angle);
+      if (seqLocks.length > 6) seqLocks.shift();
+
+      // Cada 5 aciertos sube de nivel, invierte giro y limpia marcas
+      if (seqHitsInLevel >= 5) {
+        seqHitsInLevel = 0;
+        level++;
+        direction *= -1;
+        seqLocks = [];
+        levelEl.textContent = 'NIVEL ' + String(level).padStart(2, '0');
+        reverseBanner.classList.add('show');
+        setTimeout(() => reverseBanner.classList.remove('show'), 1100);
+      }
+      spawnNextSequenceTarget();
+    } else {
+      // Fallo fuera del sector
+      burst(px, py, true, 16);
+      finish();
+    }
   } else {
-    joystickVec = { x: 0, y: 0 };
+    // Cambio de carril en Órbita y Evolución
+    targetLane = (targetLane + 1) % rings.length;
+    playSound('switch');
+    vibrate(18);
   }
 }
-
-const endJoy = () => {
-  joyActive = false;
-  joystickKnob.style.transform = 'translate(0px, 0px)';
-  joystickVec = { x: 0, y: 0 };
-};
-joystickZone.addEventListener('pointerup', endJoy);
-joystickZone.addEventListener('pointercancel', endJoy);
-
-boostBtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); isBoosting = true; boostBtn.classList.add('active'); });
-const endBoost = () => { isBoosting = false; boostBtn.classList.remove('active'); };
-boostBtn.addEventListener('pointerup', endBoost);
-boostBtn.addEventListener('pointercancel', endBoost);
 
 shell.addEventListener('pointerdown', (e) => {
-  if (e.target.closest('button, #board, #shop-modal, #update-modal, #pause-modal, #overlay:not(.hidden), .const-controls')) return;
-
+  if (e.target.closest('button, #board, #shop-modal, #update-modal, #pause-modal, #overlay:not(.hidden)')) return;
   if (mode === 'playing') {
-    if (selectedMode === 'constellation') {
-      if (selectedControl === 'follow') handleTouchDirection(e.clientX, e.clientY);
-    } else {
-      targetLane = 1 - targetLane;
-      playSound('switch');
-      vibrate(25);
-    }
-  } else if (mode === 'over') {
-    begin();
-  }
-});
-
-shell.addEventListener('pointermove', (e) => {
-  if (mode === 'playing' && selectedMode === 'constellation' && selectedControl === 'follow') {
-    handleTouchDirection(e.clientX, e.clientY);
+    handleAction();
   }
 });
 
@@ -733,39 +628,73 @@ window.addEventListener('keydown', (e) => {
   if (['Space', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyS'].includes(e.code)) {
     e.preventDefault();
     if (mode === 'playing') {
-      if (selectedMode === 'constellation') {
-        if (e.code === 'Space') isBoosting = true;
-      } else {
-        targetLane = 1 - targetLane;
-        playSound('switch');
+      handleAction();
+    } else if (mode === 'ready' || mode === 'over') {
+      if (boardEl.hidden && shopModal.hidden && document.querySelector('#update-modal').hidden) {
+        begin();
       }
-    } else if (mode === 'over') {
-      begin();
     }
   }
 });
-window.addEventListener('keyup', (e) => { if (e.code === 'Space') isBoosting = false; });
 
 startButton.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); begin(); });
 document.querySelector('#open-board').addEventListener('click', (e) => { e.stopPropagation(); renderBoard(); boardEl.hidden = false; });
 document.querySelector('#close-board').addEventListener('click', (e) => { e.stopPropagation(); boardEl.hidden = true; });
 
 // ==========================================
-// BUCLES DE ACTUALIZACIÓN (UPDATE)
+// GENERACIÓN DE PATRONES Y PARTÍCULAS
 // ==========================================
-function burst(x, y, color, count = 12) {
+function burst(x, y, isAccent = false, count = 10) {
   for (let i = 0; i < count; i++) {
     const a = Math.random() * Math.PI * 2;
-    const speed = 40 + Math.random() * 120;
+    const speed = 35 + Math.random() * 100;
     particles.push({
       x, y,
       vx: Math.cos(a) * speed,
       vy: Math.sin(a) * speed,
-      life: 0.35 + Math.random() * 0.4,
-      max: 0.75,
-      color,
-      size: 1.2 + Math.random() * 2.5
+      life: 0.3 + Math.random() * 0.3,
+      max: 0.6,
+      isAccent,
+      size: 2 + Math.random() * 2
     });
+  }
+}
+
+function addOrbitPattern() {
+  const ahead = 2.05;
+  const numLanes = rings.length;
+  const laneChoice = Math.floor(Math.random() * numLanes);
+  const otherLane = (laneChoice + 1) % numLanes;
+
+  const add = (offset, ring, type, moving = false) => {
+    objects.push({
+      a: angle + (ahead + offset) * direction,
+      ring,
+      type,
+      moving,
+      moveDir: 1,
+      hit: false
+    });
+  };
+
+  const roll = Math.random();
+
+  if (selectedMode === 'evolution' && roll < 0.15) {
+    const pTypes = ['shield', 'magnet', 'slow'];
+    add(0, laneChoice, pTypes[Math.floor(Math.random() * pTypes.length)]);
+    return;
+  }
+
+  if (roll < 0.45) {
+    add(0, laneChoice, 'hazard', selectedMode === 'evolution' && level >= 3 && Math.random() < 0.35);
+    add(0.24, otherLane, 'spark');
+  } else if (roll < 0.78) {
+    add(0, laneChoice, 'spark');
+    add(0.22, otherLane, 'hazard');
+    add(0.44, laneChoice, 'spark');
+  } else {
+    add(0, laneChoice, 'hazard');
+    add(0.28, otherLane, 'hazard');
   }
 }
 
@@ -773,117 +702,105 @@ function norm(a) {
   return ((a % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
 }
 
+// ==========================================
+// BUCLE PRINCIPAL DE ACTUALIZACIÓN (UPDATE)
+// ==========================================
 function update(dt) {
-  if (mode !== 'playing') {
-    particles = particles.filter(p => p.life > 0);
-    for (const p of particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
-    shake *= 0.85;
-    return;
+  particles = particles.filter(p => p.life > 0);
+  for (const p of particles) {
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vx *= 0.94;
+    p.vy *= 0.94;
+    p.life -= dt;
   }
+
+  for (const ft of floatTexts) {
+    ft.y += ft.vy * dt;
+    ft.alpha -= dt * 1.6;
+  }
+  floatTexts = floatTexts.filter(ft => ft.alpha > 0);
+
+  if (shake > 0.1) shake *= 0.86;
+  else shake = 0;
+
+  if (mode !== 'playing') return;
 
   elapsed += dt;
   timerEl.textContent = formatTime(elapsed);
 
-  for (const ft of floatTexts) {
-    ft.y += ft.vy * dt;
-    ft.alpha -= dt * 1.5;
-  }
-  floatTexts = floatTexts.filter(ft => ft.alpha > 0);
-
   // ----------------------------------------
-  // MODO CONSTELACIÓN (SLITHER.IO MEJORADO)
+  // MODO 03 · SECUENCIA
   // ----------------------------------------
-  if (selectedMode === 'constellation') {
-    if (selectedControl === 'joystick' && (joystickVec.x !== 0 || joystickVec.y !== 0)) {
-      playerSnake.targetAngle = Math.atan2(joystickVec.y, joystickVec.x);
-    }
-    updateSnake(playerSnake, dt);
-    score = Math.floor(playerSnake.length * 10);
-    scoreEl.textContent = score;
+  if (selectedMode === 'sequence') {
+    const speed = (1.6 + Math.min((level - 1) * 0.22, 2.2)) * (selectedDiff === 'hard' ? 1.25 : 1);
+    angle += speed * dt * direction;
 
-    for (const b of bots) {
-      updateBotAI(b, dt);
-      updateSnake(b, dt);
-    }
-    bots = bots.filter(b => b.alive);
+    const r = rings[0];
+    const px = cx + Math.cos(angle) * r;
+    const py = cy + Math.sin(angle) * r;
+    trail.unshift({ x: px, y: py, alpha: 1 });
+    if (trail.length > 10) trail.pop();
+    for (const t of trail) t.alpha -= dt * 3;
+    trail = trail.filter(t => t.alpha > 0);
 
-    for (let i = foodOrbs.length - 1; i >= 0; i--) {
-      const f = foodOrbs[i];
-      if (Math.hypot(playerSnake.x - f.x, playerSnake.y - f.y) < 18) {
-        playerSnake.length += 0.8;
-        foodOrbs.splice(i, 1);
-        photons += 1;
-        updateWalletUI();
-        playSound('collect');
-        vibrate(15);
-        continue;
-      }
-      for (const b of bots) {
-        if (Math.hypot(b.x - f.x, b.y - f.y) < 18) {
-          b.length += 0.6;
-          foodOrbs.splice(i, 1);
-          break;
-        }
-      }
-    }
-
-    while (foodOrbs.length < 95) {
-      foodOrbs.push({ x: Math.random() * MAP_SIZE, y: Math.random() * MAP_SIZE, r: 2.5 + Math.random() * 2.5, color: Math.random() < 0.6 ? '#6df7e8' : '#ff5b87' });
-    }
-
-    for (const b of bots) {
-      for (let i = 3; i < b.segments.length; i++) {
-        if (Math.hypot(playerSnake.x - b.segments[i].x, playerSnake.y - b.segments[i].y) < 11) {
-          burst(playerSnake.x, playerSnake.y, '#ff5b87', 22);
-          finish();
-          return;
-        }
-      }
-      for (let i = 3; i < playerSnake.segments.length; i++) {
-        if (Math.hypot(b.x - playerSnake.segments[i].x, b.y - playerSnake.segments[i].y) < 11) {
-          b.alive = false;
-          burst(b.x, b.y, b.color, 24);
-          photons += 12;
-          spawnFloatText('+12 ✦', b.x, b.y, '#fdd835');
-          updateWalletUI();
-          playSound('collect');
-          vibrate(50);
-
-          for (let s = 0; s < b.segments.length; s += 2) {
-            foodOrbs.push({ x: b.segments[s].x, y: b.segments[s].y, r: 3.5, color: b.color });
-          }
-          break;
-        }
-      }
-    }
-
-    if (bots.length < 5) {
-      const botColors = ['#ff5b87', '#bd93f9', '#fdd835', '#ff9a3c', '#50fa7b'];
-      bots.push(createSnake(Math.random() * (MAP_SIZE - 300) + 150, Math.random() * (MAP_SIZE - 300) + 150, botColors[Math.floor(Math.random() * botColors.length)], false));
+    // Si se pasa completamente del objetivo sin pulsar
+    const diff = angleDiff(angle, seqTargetAngle) * direction;
+    if (diff > seqArcWidth / 2 + 0.12) {
+      burst(px, py, true, 16);
+      finish();
     }
     return;
   }
 
   // ----------------------------------------
-  // MODOS CLÁSICO Y EVOLUCIÓN
+  // MODOS 01 · ÓRBITA & 02 · EVOLUCIÓN
   // ----------------------------------------
   const shape = getGeometryType();
   const destRadius = rings[targetLane] || rings[0];
-  currentRadius += (destRadius - currentRadius) * Math.min(1, dt * 18);
+  currentRadius += (destRadius - currentRadius) * Math.min(1, dt * 20);
 
-  const nextLevel = 1 + Math.max(Math.floor(score / 6), Math.floor(elapsed / 22));
-  if (nextLevel > level) level = nextLevel;
+  if (magnetTimer > 0) {
+    magnetTimer -= dt;
+    hudMagnet.hidden = false;
+  } else { hudMagnet.hidden = true; }
 
-  const baseSpeed = 1.35 + Math.min((level - 1) * 0.14, 1.4);
-  angle += baseSpeed * dt * direction;
+  if (slowTimer > 0) {
+    slowTimer -= dt;
+    hudSlow.hidden = false;
+  } else { hudSlow.hidden = true; }
 
-  spawnClock -= dt;
+  hudShield.hidden = !shieldActive;
+
+  const timeScale = slowTimer > 0 ? 0.55 : 1;
+  const effectiveDt = dt * timeScale;
+
+  const baseLevel = selectedDiff === 'hard' ? 3 : (selectedDiff === 'normal' ? 2 : 1);
+  const nextLevel = baseLevel + Math.max(Math.floor(score / 8), Math.floor(elapsed / 22));
+  if (nextLevel > level) {
+    level = nextLevel;
+    resize();
+  }
+
+  if (selectedMode === 'evolution' && level >= 3) {
+    reverseTimer -= effectiveDt;
+    if (reverseTimer <= 2 && reverseTimer > 0) {
+      reverseBanner.classList.add('show');
+    } else if (reverseTimer <= 0) {
+      direction *= -1;
+      reverseTimer = 20 + Math.random() * 10;
+      reverseBanner.classList.remove('show');
+      vibrate([40, 30, 40]);
+    }
+  }
+
+  const baseSpeed = 1.45 + Math.min((level - 1) * 0.15, 1.5);
+  angle += baseSpeed * effectiveDt * direction;
+
+  spawnClock -= effectiveDt;
   if (spawnClock <= 0) {
-    const laneChoice = Math.random() < 0.5 ? 0 : 1;
-    const otherLane = 1 - laneChoice;
-    objects.push({ a: angle + 2.0 * direction, ring: laneChoice, type: 'hazard', spin: Math.random() * 6, hit: false });
-    objects.push({ a: angle + 2.25 * direction, ring: otherLane, type: 'spark', spin: 0, hit: false });
-    spawnClock = Math.max(0.48, 1.25 - (level - 1) * 0.08);
+    addOrbitPattern();
+    spawnClock = Math.max(0.46, 1.22 - (level - 1) * 0.08);
   }
 
   levelEl.textContent = 'NIVEL ' + String(level).padStart(2, '0');
@@ -897,371 +814,298 @@ function update(dt) {
 
   for (const obj of objects) {
     if (obj.hit) continue;
-    const r = rings[obj.ring] * getRadiusModifier(obj.a, shape);
-    const ox = cx + Math.cos(obj.a) * r;
-    const oy = cy + Math.sin(obj.a) * r;
+
+    if (obj.moving) {
+      obj.ring += obj.moveDir * effectiveDt * 0.75;
+      if (obj.ring >= rings.length - 1) { obj.ring = rings.length - 1; obj.moveDir = -1; }
+      else if (obj.ring <= 0) { obj.ring = 0; obj.moveDir = 1; }
+    }
+
+    const rBase = rings[Math.round(obj.ring)] || rings[0];
+    const r = rBase * getRadiusModifier(obj.a, shape);
+    let ox = cx + Math.cos(obj.a) * r;
+    let oy = cy + Math.sin(obj.a) * r;
+
+    if (magnetTimer > 0 && obj.type === 'spark') {
+      ox += (px - ox) * 0.18;
+      oy += (py - oy) * 0.18;
+    }
 
     if (Math.hypot(px - ox, py - oy) < 18) {
       if (obj.type === 'hazard') {
-        burst(px, py, '#ff5b87', 20);
-        finish();
-        break;
-      } else {
+        if (shieldActive) {
+          shieldActive = false;
+          obj.hit = true;
+          burst(ox, oy, false, 12);
+          playSound('powerup');
+          vibrate(35);
+        } else {
+          burst(px, py, true, 18);
+          finish();
+          break;
+        }
+      } else if (obj.type === 'spark') {
         obj.hit = true;
         streak++;
-        const pointsToAdd = Math.round((1 + Math.floor(streak / 5)) * scoreMultiplier);
-        score += pointsToAdd;
+        const pts = Math.round((1 + Math.floor(streak / 5)) * scoreMultiplier);
+        score += pts;
         photons += Math.round(1 * scoreMultiplier);
         scoreEl.textContent = score;
         setStreak();
         updateWalletUI();
         playSound('collect');
-        vibrate(20);
-        burst(ox, oy, '#6df7e8', 10);
-        spawnFloatText(`+${pointsToAdd}`, ox, oy, scoreMultiplier > 1 ? '#ff5b87' : '#6df7e8');
+        vibrate(18);
+        burst(ox, oy, false, 8);
+        spawnFloatText(`+${pts}`, ox, oy, scoreMultiplier > 1);
+      } else if (['shield', 'magnet', 'slow'].includes(obj.type)) {
+        obj.hit = true;
+        playSound('powerup');
+        vibrate([25, 25]);
+        if (obj.type === 'shield') shieldActive = true;
+        if (obj.type === 'magnet') magnetTimer = 7;
+        if (obj.type === 'slow') slowTimer = 5;
+        burst(ox, oy, true, 12);
+        spawnFloatText(obj.type.toUpperCase(), ox, oy, true);
       }
     }
   }
 
-  objects = objects.filter(o => norm(o.a - angle) < Math.PI * 1.8 && !o.hit);
-  particles = particles.filter(p => p.life > 0);
-  for (const p of particles) {
-    p.x += p.vx * dt;
-    p.y += p.vy * dt;
-    p.vx *= 0.95;
-    p.vy *= 0.95;
-    p.life -= dt;
-  }
-  for (const t of trail) t.alpha -= dt * 2.2;
+  objects = objects.filter(o => {
+    const diff = (o.a - angle) * direction;
+    return diff > -Math.PI * 0.6 && diff < Math.PI * 2.2 && !o.hit;
+  });
+
+  for (const t of trail) t.alpha -= dt * 2.5;
   trail = trail.filter(t => t.alpha > 0);
-  shake *= 0.88;
 }
 
 // ==========================================
-// IA Y FÍSICA CONSTELACIÓN
+// RENDERIZADO MINIMALISTA BENTO (DRAW)
 // ==========================================
-function updateBotAI(bot, dt) {
-  bot.aiTimer -= dt;
-  if (bot.aiTimer > 0) return;
-  bot.aiTimer = 0.12 + Math.random() * 0.08;
+function drawNodeShape(x, y, rot, pal) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.fillStyle = pal.ink;
+  ctx.strokeStyle = pal.bg;
+  ctx.lineWidth = 2;
 
-  let danger = false;
-  let avoidAngle = 0;
-  const lookDist = 75;
-  const forwardX = bot.x + Math.cos(bot.angle) * lookDist;
-  const forwardY = bot.y + Math.sin(bot.angle) * lookDist;
-
-  if (forwardX < 40 || forwardX > MAP_SIZE - 40 || forwardY < 40 || forwardY > MAP_SIZE - 40) {
-    danger = true;
-    avoidAngle = Math.atan2(MAP_SIZE / 2 - bot.y, MAP_SIZE / 2 - bot.x);
+  if (equippedSkin === 'square') {
+    ctx.fillRect(-7, -7, 14, 14);
+    ctx.strokeRect(-7, -7, 14, 14);
+  } else if (equippedSkin === 'diamond') {
+    ctx.beginPath();
+    ctx.moveTo(0, -9); ctx.lineTo(9, 0); ctx.lineTo(0, 9); ctx.lineTo(-9, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  } else if (equippedSkin === 'ring') {
+    ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = pal.bg;
+    ctx.beginPath(); ctx.arc(0, 0, 3.5, 0, Math.PI * 2); ctx.fill();
+  } else if (equippedSkin === 'cross') {
+    ctx.fillRect(-8, -2.5, 16, 5);
+    ctx.fillRect(-2.5, -8, 5, 16);
+  } else {
+    // Punto clásico
+    ctx.beginPath();
+    ctx.arc(0, 0, 7.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
   }
-
-  if (!danger && playerSnake) {
-    for (let i = 0; i < playerSnake.segments.length; i += 2) {
-      if (Math.hypot(forwardX - playerSnake.segments[i].x, forwardY - playerSnake.segments[i].y) < 38) {
-        danger = true;
-        avoidAngle = bot.angle + Math.PI * 0.75;
-        break;
-      }
-    }
-  }
-
-  if (danger) {
-    bot.targetAngle = avoidAngle;
-    bot.isBoosting = false;
-    return;
-  }
-
-  if (playerSnake && bot.length > playerSnake.length && Math.hypot(playerSnake.x - bot.x, playerSnake.y - bot.y) < 180) {
-    const cutX = playerSnake.x + Math.cos(playerSnake.angle) * 60;
-    const cutY = playerSnake.y + Math.sin(playerSnake.angle) * 60;
-    bot.targetAngle = Math.atan2(cutY - bot.y, cutX - bot.x);
-    bot.isBoosting = true;
-    return;
-  }
-
-  bot.isBoosting = false;
-  let closest = null;
-  let minDist = 220;
-  for (const f of foodOrbs) {
-    const d = Math.hypot(f.x - bot.x, f.y - bot.y);
-    if (d < minDist) {
-      minDist = d;
-      closest = f;
-    }
-  }
-
-  if (closest) {
-    bot.targetAngle = Math.atan2(closest.y - bot.y, closest.x - bot.x);
-  } else if (Math.random() < 0.25) {
-    bot.targetAngle += (Math.random() - 0.5) * 1.2;
-  }
+  ctx.restore();
 }
 
-function updateSnake(snake, dt) {
-  if (!snake.alive) return;
-  const boosting = snake.isPlayer ? (isBoosting && snake.length > 8) : (snake.isBoosting && snake.length > 12);
-  const currentSpeed = boosting ? snake.speed * 1.85 : snake.speed;
-
-  let diff = snake.targetAngle - snake.angle;
-  while (diff < -Math.PI) diff += Math.PI * 2;
-  while (diff > Math.PI) diff -= Math.PI * 2;
-  snake.angle += diff * Math.min(1, dt * 8.5);
-
-  snake.x += Math.cos(snake.angle) * currentSpeed * dt;
-  snake.y += Math.sin(snake.angle) * currentSpeed * dt;
-
-  if (snake.x < 10 || snake.x > MAP_SIZE - 10 || snake.y < 10 || snake.y > MAP_SIZE - 10) {
-    if (snake.isPlayer) finish();
-    else snake.alive = false;
-    return;
-  }
-
-  if (boosting) {
-    snake.boostClock += dt;
-    if (snake.boostClock > 0.14) {
-      snake.boostClock = 0;
-      snake.length -= 0.35;
-      const tail = snake.segments[snake.segments.length - 1];
-      foodOrbs.push({ x: tail.x, y: tail.y, r: 2.2, color: snake.color });
-    }
-  }
-
-  const head = { x: snake.x, y: snake.y };
-  let prev = head;
-  for (let i = 0; i < snake.segments.length; i++) {
-    const seg = snake.segments[i];
-    const dx = prev.x - seg.x;
-    const dy = prev.y - seg.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist > 7) {
-      const factor = (dist - 7) / dist;
-      seg.x += dx * factor;
-      seg.y += dy * factor;
-    }
-    prev = seg;
-  }
-
-  while (snake.segments.length < Math.floor(snake.length)) {
-    const last = snake.segments[snake.segments.length - 1] || head;
-    snake.segments.push({ x: last.x, y: last.y });
-  }
-  while (snake.segments.length > Math.floor(snake.length)) {
-    snake.segments.pop();
-  }
-}
-
-// ==========================================
-// RENDERIZADO VISUAL LIMPIO
-// ==========================================
-function getTrailColor() {
-  const t = TRAILS.find(item => item.id === equippedTrail);
-  return t ? t.color : '#6df7e8';
-}
-
-function draw(time) {
+function draw() {
+  const pal = getPalette();
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
 
   ctx.save();
   if (shake > 0.1) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
 
-  // ----------------------------------------
-  // MODO CONSTELACIÓN
-  // ----------------------------------------
-  if (mode === 'playing' && selectedMode === 'constellation' && playerSnake) {
-    const camX = w / 2 - playerSnake.x;
-    const camY = h / 2 - playerSnake.y;
-    ctx.save();
-    ctx.translate(camX, camY);
+  // Cuadrícula técnica sutil de fondo
+  ctx.strokeStyle = pal.borderSoft;
+  ctx.lineWidth = 0.5;
+  ctx.globalAlpha = 0.45;
+  const gridStep = 44;
+  for (let gx = cx % gridStep; gx < w; gx += gridStep) {
+    ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, h); ctx.stroke();
+  }
+  for (let gy = cy % gridStep; gy < h; gy += gridStep) {
+    ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
 
-    ctx.strokeStyle = 'rgba(255, 91, 135, 0.4)';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(0, 0, MAP_SIZE, MAP_SIZE);
+  // ----------------------------------------
+  // RENDER MODO 03 · SECUENCIA
+  // ----------------------------------------
+  if (mode === 'playing' && selectedMode === 'sequence') {
+    const r = rings[0];
 
-    for (const f of foodOrbs) {
-      ctx.fillStyle = f.color;
-      ctx.beginPath();
-      ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
-      ctx.fill();
+    // Anillo base fino
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = pal.borderSoft;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Sector objetivo (Arco grueso en tinta negra)
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, seqTargetAngle - seqArcWidth / 2, seqTargetAngle + seqArcWidth / 2);
+    ctx.strokeStyle = pal.ink;
+    ctx.lineWidth = 14;
+    ctx.lineCap = 'butt';
+    ctx.stroke();
+
+    // Marcas de aciertos anteriores en el nivel
+    for (const lockAng of seqLocks) {
+      const lx = cx + Math.cos(lockAng) * r;
+      const ly = cy + Math.sin(lockAng) * r;
+      ctx.fillStyle = pal.accent;
+      ctx.fillRect(lx - 4, ly - 4, 8, 8);
     }
 
-    const allSnakes = [...bots, playerSnake];
-    for (const s of allSnakes) {
-      if (!s.alive) continue;
-      ctx.fillStyle = s.color;
-      for (const seg of s.segments) {
-        ctx.beginPath();
-        ctx.arc(seg.x, seg.y, 4.8, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, 7, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
+    // Centro con contador de aciertos del nivel
+    ctx.fillStyle = pal.ink;
+    ctx.font = '700 28px "DM Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${seqHitsInLevel}/5`, cx, cy);
+
+    // Puntero giratorio
+    const px = cx + Math.cos(angle) * r;
+    const py = cy + Math.sin(angle) * r;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(px, py);
+    ctx.strokeStyle = pal.accent;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    drawNodeShape(px, py, angle + Math.PI / 2, pal);
 
   } else {
     // ----------------------------------------
-    // FONDO ESTELAR Y ÓRBITAS
+    // RENDER ÓRBITA / EVOLUCIÓN Y FONDO EN REPOSO
     // ----------------------------------------
-    for (const s of stars) {
-      const twinkle = 0.75 + Math.sin(time * 0.001 + s.phase) * 0.25;
-      ctx.globalAlpha = s.a * twinkle;
-      ctx.fillStyle = '#d4dcff';
-      ctx.beginPath();
-      ctx.arc(s.x * w, s.y * h, s.r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-
-    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, (rings[0] || 100) * 0.72);
-    glow.addColorStop(0, '#252b55');
-    glow.addColorStop(0.58, '#151a36');
-    glow.addColorStop(1, '#0c1024');
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(cx, cy, (rings[0] || 100) * 0.72, 0, Math.PI * 2);
-    ctx.fill();
-
     const shape = getGeometryType();
 
-    // Dibujar anillos
-    for (let ring = 0; ring < rings.length; ring++) {
-      const r = rings[ring];
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.strokeStyle = (targetLane === ring && mode === 'playing') ? '#6df7e844' : '#62698a42';
-      ctx.lineWidth = (targetLane === ring && mode === 'playing') ? 2 : 1;
-      ctx.stroke();
+    // Punto central de referencia
+    ctx.fillStyle = pal.ink;
+    ctx.fillRect(cx - 3, cy - 3, 6, 6);
 
-      if (targetLane === ring && mode === 'playing') {
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, angle - 0.36, angle + 0.18);
-        ctx.strokeStyle = '#6df7e866';
-        ctx.lineWidth = 3;
-        ctx.lineCap = 'round';
-        ctx.stroke();
+    // Anillos orbitales
+    for (let ringIdx = 0; ringIdx < rings.length; ringIdx++) {
+      const baseR = rings[ringIdx];
+      ctx.beginPath();
+      const steps = shape === 'circle' ? 72 : 80;
+      for (let i = 0; i <= steps; i++) {
+        const theta = (i / steps) * Math.PI * 2;
+        const r = baseR * getRadiusModifier(theta, shape);
+        const x = cx + Math.cos(theta) * r;
+        const y = cy + Math.sin(theta) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       }
+      ctx.closePath();
+
+      const activeRing = (targetLane === ringIdx && mode === 'playing');
+      ctx.strokeStyle = activeRing ? pal.ink : pal.borderSoft;
+      ctx.lineWidth = activeRing ? 2 : 1.5;
+      ctx.stroke();
     }
 
-    // SI ESTÁ EN PARTIDA ACTIVA: Dibujar obstáculos, estela y jugador
+    // Solo dibujar elementos dinámicos si la partida está activa
     if (mode === 'playing') {
+      // Obstáculos y fichas
       for (const obj of objects) {
-        const r = rings[obj.ring] * getRadiusModifier(obj.a, shape);
+        const rBase = rings[Math.round(obj.ring)] || rings[0];
+        const r = rBase * getRadiusModifier(obj.a, shape);
         const x = cx + Math.cos(obj.a) * r;
         const y = cy + Math.sin(obj.a) * r;
 
         if (obj.type === 'hazard') {
+          // Bloque rojo bermellón afilado
           ctx.save();
           ctx.translate(x, y);
-          ctx.rotate(obj.spin + time * 0.0004);
-          ctx.shadowBlur = 20;
-          ctx.shadowColor = '#ff4777';
-          ctx.fillStyle = '#ff5b87';
-          ctx.beginPath();
-          for (let i = 0; i < 8; i++) {
-            const a = i * Math.PI / 4;
-            const rr = i % 2 ? 7 : 13;
-            ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
-          }
-          ctx.closePath();
-          ctx.fill();
+          ctx.rotate(obj.a + Math.PI / 4);
+          ctx.fillStyle = pal.accent;
+          ctx.fillRect(-7.5, -7.5, 15, 15);
           ctx.restore();
-        } else {
-          ctx.save();
-          ctx.shadowBlur = 19;
-          ctx.shadowColor = '#6df7e8';
-          ctx.fillStyle = '#b2fff5';
+        } else if (obj.type === 'spark') {
+          // Nodo coleccionable
+          ctx.fillStyle = pal.bg;
+          ctx.strokeStyle = pal.ink;
+          ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.arc(x, y, 5.5 + Math.sin(time * 0.008 + obj.a) * 1.4, 0, Math.PI * 2);
+          ctx.arc(x, y, 5.5, 0, Math.PI * 2);
           ctx.fill();
-          ctx.strokeStyle = '#6df7e8aa';
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.arc(x, y, 10, 0, Math.PI * 2);
           ctx.stroke();
-          ctx.restore();
+        } else {
+          // Power-up minimalista (cuadrado con inicial)
+          ctx.fillStyle = pal.ink;
+          ctx.fillRect(x - 8, y - 8, 16, 16);
+          ctx.fillStyle = pal.bg;
+          ctx.font = '700 9px "DM Mono", monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          const letter = obj.type === 'shield' ? 'E' : (obj.type === 'magnet' ? 'I' : 'L');
+          ctx.fillText(letter, x, y);
         }
       }
 
-      // Estela
-      const trailCol = getTrailColor();
-      for (const t of trail) {
-        ctx.globalAlpha = t.alpha * 0.38;
-        ctx.fillStyle = trailCol;
-        ctx.beginPath();
-        ctx.arc(t.x, t.y, 4, 0, Math.PI * 2);
-        ctx.fill();
+      // Estela del nodo
+      for (let i = 0; i < trail.length; i++) {
+        const t = trail[i];
+        ctx.globalAlpha = t.alpha * 0.35;
+        ctx.fillStyle = equippedTrail === 'accent' ? pal.accent : pal.ink;
+        if (equippedTrail === 'dots') {
+          if (i % 2 === 0) ctx.fillRect(t.x - 2, t.y - 2, 4, 4);
+        } else {
+          ctx.beginPath();
+          ctx.arc(t.x, t.y, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
       ctx.globalAlpha = 1;
 
-      // Nave del jugador
+      // Nodo del jugador
       const playerR = currentRadius * getRadiusModifier(angle, shape);
       const px = cx + Math.cos(angle) * playerR;
       const py = cy + Math.sin(angle) * playerR;
 
-      ctx.save();
-      ctx.shadowBlur = 24;
-      ctx.shadowColor = '#6df7e8';
+      drawNodeShape(px, py, angle + Math.PI / 2, pal);
 
-      if (equippedSkin === 'pulse') {
-        ctx.translate(px, py);
-        ctx.rotate(angle + Math.PI / 2);
-        ctx.fillStyle = '#ffffff';
+      // Aro de escudo si está activo
+      if (shieldActive) {
+        ctx.strokeStyle = pal.accent;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
         ctx.beginPath();
-        ctx.moveTo(0, -9); ctx.lineTo(7, 7); ctx.lineTo(-7, 7); ctx.closePath();
-        ctx.fill();
-      } else if (equippedSkin === 'vortex') {
-        ctx.translate(px, py);
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#6df7e8'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI); ctx.stroke();
-      } else if (equippedSkin === 'phoenix') {
-        ctx.translate(px, py);
-        ctx.rotate(angle + Math.PI / 2);
-        ctx.fillStyle = '#ff9100';
-        ctx.beginPath();
-        ctx.moveTo(0, -11); ctx.lineTo(9, 8); ctx.lineTo(0, 4); ctx.lineTo(-9, 8); ctx.closePath();
-        ctx.fill();
-      } else if (equippedSkin === 'nova') {
-        ctx.translate(px, py);
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#bd93f9'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.ellipse(0, 0, 14, 5, Math.PI / 4, 0, Math.PI * 2); ctx.stroke();
-      } else {
-        ctx.fillStyle = '#e5fffb';
-        ctx.beginPath();
-        ctx.arc(px, py, 7, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#6df7e8';
-        ctx.beginPath();
-        ctx.arc(px, py, 3.2, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.arc(px, py, 14, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
-      ctx.restore();
-
-      // Partículas
-      for (const p of particles) {
-        ctx.globalAlpha = Math.max(0, p.life / p.max);
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
     }
   }
+
+  // Partículas
+  for (const p of particles) {
+    ctx.globalAlpha = Math.max(0, p.life / p.max);
+    ctx.fillStyle = p.isAccent ? pal.accent : pal.ink;
+    ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+  }
+  ctx.globalAlpha = 1;
 
   // Textos flotantes
   for (const ft of floatTexts) {
     ctx.save();
-    ctx.font = '700 13px "DM Mono", monospace';
-    ctx.fillStyle = ft.color;
+    ctx.font = '700 11px "DM Mono", monospace';
+    ctx.fillStyle = ft.isAccent ? pal.accent : pal.ink;
     ctx.globalAlpha = ft.alpha;
+    ctx.textAlign = 'center';
     ctx.fillText(ft.text, ft.x, ft.y);
     ctx.restore();
   }
@@ -1273,7 +1117,7 @@ function frame(now) {
   const dt = Math.min((now - (lastTime || now)) / 1000, 0.04);
   lastTime = now;
   update(dt);
-  draw(now);
+  draw();
   requestAnimationFrame(frame);
 }
 
@@ -1281,12 +1125,12 @@ function frame(now) {
 const updateModal = document.querySelector('#update-modal');
 const closeUpdateBtn = document.querySelector('#close-update');
 const dontShowCheck = document.querySelector('#dont-show-check');
-if (localStorage.getItem('orbita-dismissed-version') !== CURRENT_VERSION) {
+if (localStorage.getItem('bento-dismissed-version') !== CURRENT_VERSION) {
   updateModal.hidden = false;
 }
 closeUpdateBtn.addEventListener('click', (e) => {
   e.stopPropagation();
-  if (dontShowCheck.checked) localStorage.setItem('orbita-dismissed-version', CURRENT_VERSION);
+  if (dontShowCheck.checked) localStorage.setItem('bento-dismissed-version', CURRENT_VERSION);
   updateModal.hidden = true;
 });
 
