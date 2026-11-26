@@ -4,18 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#f4f4f1">
-  <title>Bento Game</title>
+  <title>Bento Game · Macroapp</title>
   
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23f4f4f1'/><rect x='14' y='14' width='32' height='32' fill='none' stroke='%23141414' stroke-width='6'/><rect x='54' y='14' width='32' height='32' fill='%23141414'/><rect x='14' y='54' width='32' height='32' fill='none' stroke='%23141414' stroke-width='6'/><rect x='54' y='54' width='32' height='32' fill='%23d9381e'/></svg>">
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23f4f4f1'/><rect x='14' y='14' width='32' height='32' fill='none' stroke='%23141414' stroke-width='6'/><rect x='54' y='14' width='32' height='32' fill='%23141414'/><rect x='14' y='54' width='32' height='32' fill='none' stroke='%23141414' stroke-width='6'/><rect x='54' y='54' width='32' height='32' fill='%23d9381e'/></svg>">
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=3.0.0">
+  <link rel="icon" type="image/svg+xml" href="./icon.svg">
+  <link rel="apple-touch-icon" href="./icon.svg">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="stylesheet" href="./style.css?v=4.0.0">
 </head>
 <body>
   <main class="game-shell">
     <canvas id="game" aria-label="Bento Game"></canvas>
     
-    <!-- Barra superior de juego (solo visible en partida) -->
+    <!-- Barra superior en partida -->
     <header class="topbar" id="game-topbar" aria-live="polite" hidden>
       <div class="score-wrap">
         <span class="eyebrow" id="score-label">PUNTOS</span>
@@ -40,10 +40,29 @@
       <div id="streak" class="streak" aria-label="Racha"></div>
     </header>
 
+    <!-- HUD Power-ups -->
     <div class="powerup-hud" id="powerup-hud">
       <div id="hud-shield" class="hud-item" hidden>[ ESCUDO ]</div>
       <div id="hud-magnet" class="hud-item" hidden>[ IMÁN ]</div>
       <div id="hud-slow" class="hud-item" hidden>[ LENTO ]</div>
+    </div>
+
+    <!-- Interfaz Duelo Local 1v1 (Pantalla Dividida) -->
+    <div id="duel-ui" class="duel-ui" hidden>
+      <button type="button" id="duel-p2" class="duel-pad duel-top">
+        <span class="duel-score" id="duel-score-2">0</span>
+        <strong id="duel-msg-2">ESPERA LA SEÑAL...</strong>
+        <small>JUGADOR 02</small>
+      </button>
+      <div class="duel-center-bar">
+        <span id="duel-status">RONDA 1 / 5</span>
+        <button type="button" id="duel-exit" class="duel-exit-btn">SALIR</button>
+      </div>
+      <button type="button" id="duel-p1" class="duel-pad duel-bottom">
+        <small>JUGADOR 01</small>
+        <strong id="duel-msg-1">ESPERA LA SEÑAL...</strong>
+        <span class="duel-score" id="duel-score-1">0</span>
+      </button>
     </div>
 
     <!-- Menú de Pausa -->
@@ -57,65 +76,96 @@
       <p class="pause-desc">Simulación detenida temporalmente.</p>
       <div class="pause-actions">
         <button id="resume-btn" class="primary-btn" type="button">CONTINUAR <span>→</span></button>
-        <button id="quit-btn" class="board-trigger quit-trigger" type="button">SALIR AL MENÚ</button>
+        <button id="quit-btn" class="board-trigger quit-trigger" type="button">SALIR AL HUB</button>
       </div>
     </section>
 
-    <!-- Menú Principal Estilo Bentokit -->
-    <div class="center-ui" id="overlay">
+    <!-- HUB PRINCIPAL DE LA MACROAPP -->
+    <div class="hub-ui" id="overlay">
       <div class="bento-header">
         <div class="bento-brand">
-          <svg viewBox="0 0 44 44" class="bento-logo-svg" aria-hidden="true">
-            <rect x="2" y="2" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5"/>
-            <rect x="25" y="2" width="17" height="17" fill="currentColor"/>
-            <rect x="2" y="25" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5"/>
-            <rect x="25" y="25" width="17" height="17" fill="var(--accent)"/>
-          </svg>
+          <img src="./icon.svg" alt="Logo Bento" class="bento-logo-img">
           <div class="bento-titles">
             <h1><span>BENTO</span> GAME</h1>
-            <p class="eyebrow">ARCADE MINIMALISTA LOCAL</p>
+            <p class="eyebrow" id="operator-rank">OPERADOR NV. 01 · 0 XP</p>
           </div>
         </div>
         <div class="wallet-badge" id="menu-photons">0 FICHAS</div>
       </div>
 
-      <div class="bento-divider"></div>
+      <div class="xp-bar-wrap">
+        <div class="xp-bar-fill" id="xp-bar-fill" style="width: 0%"></div>
+      </div>
 
       <p class="result-banner" id="result-banner" hidden></p>
 
-      <!-- Tarjetas de Selección de Juego -->
-      <div class="bento-cards" id="mode-group">
-        <button type="button" class="bento-card active" data-mode="classic">
+      <!-- Filtros de Categoría del Catálogo -->
+      <div class="cat-tabs" id="cat-tabs">
+        <button type="button" class="cat-tab active" data-cat="all">TODOS (6)</button>
+        <button type="button" class="cat-tab" data-cat="reflex">REFLEJOS</button>
+        <button type="button" class="cat-tab" data-cat="precision">PRECISIÓN</button>
+        <button type="button" class="cat-tab" data-cat="logic">LÓGICA</button>
+      </div>
+
+      <!-- Catálogo Desplazable de Cartuchos -->
+      <div class="bento-catalog" id="mode-group">
+        <button type="button" class="bento-card active" data-mode="classic" data-cat="reflex">
           <div class="card-top">
-            <span class="card-num">01 · CLÁSICO</span>
+            <span class="card-num">01 · REFLEJOS</span>
             <span class="card-tag">1 TOQUE</span>
           </div>
           <strong>BENTO ÓRBITA</strong>
           <small>Cambia de anillo, recoge nodos y esquiva bloqueos.</small>
         </button>
 
-        <button type="button" class="bento-card" data-mode="evolution">
+        <button type="button" class="bento-card" data-mode="evolution" data-cat="reflex">
           <div class="card-top">
             <span class="card-num">02 · PROGRESIVO</span>
-            <span class="card-tag">NIVELES</span>
+            <span class="card-tag">3 CARRILES</span>
           </div>
           <strong>BENTO EVOLUCIÓN</strong>
-          <small>3 anillos, geometrías dinámicas, mejoras e inversión.</small>
+          <small>Geometrías dinámicas, mejoras e inversión de giro.</small>
         </button>
 
-        <button type="button" class="bento-card" data-mode="sequence">
+        <button type="button" class="bento-card" data-mode="sequence" data-cat="precision">
           <div class="card-top">
             <span class="card-num">03 · PRECISIÓN</span>
-            <span class="card-tag">NUEVO</span>
+            <span class="card-tag">RITMO</span>
           </div>
           <strong>BENTO SECUENCIA</strong>
-          <small>Detén el puntero dentro del sector marcado para subir de nivel.</small>
+          <small>Detén el puntero dentro del sector marcado.</small>
+        </button>
+
+        <button type="button" class="bento-card" data-mode="vector" data-cat="reflex">
+          <div class="card-top">
+            <span class="card-num">04 · EVASIÓN</span>
+            <span class="card-tag">MANTENER</span>
+          </div>
+          <strong>BENTO VECTOR</strong>
+          <small>Mantén pulsado para virar a la derecha, suelta para izquierda.</small>
+        </button>
+
+        <button type="button" class="bento-card" data-mode="matrix" data-cat="logic">
+          <div class="card-top">
+            <span class="card-num">05 · MEMORIA</span>
+            <span class="card-tag">CUADRÍCULA</span>
+          </div>
+          <strong>BENTO MATRIZ</strong>
+          <small>Memoriza los bloques bermellón y reprodúcelos.</small>
+        </button>
+
+        <button type="button" class="bento-card" data-mode="stack" data-cat="precision">
+          <div class="card-top">
+            <span class="card-num">06 · CONSTRUCCIÓN</span>
+            <span class="card-tag">APILAR</span>
+          </div>
+          <strong>BENTO EQUILIBRIO</strong>
+          <small>Apila bloques en movimiento recortando el sobrante.</small>
         </button>
       </div>
 
       <!-- Selector de Dificultad -->
       <div class="diff-selector" id="diff-container">
-        <span class="eyebrow">DIFICULTAD Y MULTIPLICADOR</span>
         <div class="btn-group" id="diff-group">
           <button type="button" class="opt-btn active" data-diff="easy">FÁCIL (1x)</button>
           <button type="button" class="opt-btn" data-diff="normal">NORMAL (1.5x)</button>
@@ -123,74 +173,68 @@
         </div>
       </div>
 
+      <!-- Acciones Principales -->
       <div class="menu-actions">
-        <button id="start" class="primary-btn" type="button">INICIAR PARTIDA <span>↗</span></button>
+        <button id="start" class="primary-btn" type="button">EJECUTAR CARTUCHO <span>↗</span></button>
         <div class="sub-actions">
-          <button id="open-board" class="board-trigger" type="button">HISTORIAL</button>
-          <button id="open-shop" class="board-trigger shop-trigger" type="button">TIENDA</button>
+          <button id="open-missions" class="board-trigger" type="button">MISIONES</button>
+          <button id="open-duel" class="board-trigger accent-border" type="button">DUELO 1v1</button>
+          <button id="open-shop" class="board-trigger" type="button">TIENDA</button>
+          <button id="open-profile" class="board-trigger" type="button">PERFIL</button>
         </div>
       </div>
     </div>
 
-    <!-- Tienda Minimalista -->
+    <!-- Modal de Misiones -->
+    <section id="missions-modal" class="modal-box" hidden>
+      <div class="modal-head">
+        <div>
+          <span class="eyebrow">OBJETIVOS ACTIVOS</span>
+          <h2>MISIONES</h2>
+        </div>
+        <button id="close-missions" class="close-board" type="button">×</button>
+      </div>
+      <div id="missions-list" class="missions-list"></div>
+    </section>
+
+    <!-- Modal de Tienda -->
     <section id="shop-modal" class="modal-box" hidden>
       <div class="modal-head">
         <div>
           <span class="eyebrow">PERSONALIZACIÓN</span>
           <h2>TIENDA</h2>
         </div>
-        <button id="close-shop" class="close-board" type="button" aria-label="Cerrar">×</button>
+        <button id="close-shop" class="close-board" type="button">×</button>
       </div>
       <div class="shop-wallet">SALDO: <strong id="shop-photons">0</strong> FICHAS</div>
-      
       <span class="eyebrow shop-category-title">FORMA DEL NODO</span>
       <div class="shop-grid" id="skin-grid"></div>
-
       <span class="eyebrow shop-category-title">TRAZO / ESTELA</span>
       <div class="shop-grid" id="trail-grid"></div>
-
       <span class="eyebrow shop-category-title">PAPEL / TEMA</span>
       <div class="shop-grid" id="theme-grid"></div>
     </section>
 
-    <!-- Modal de Actualizaciones -->
-    <section id="update-modal" class="modal-box" hidden>
+    <!-- Modal de Perfil, Historial y Backup -->
+    <section id="profile-modal" class="modal-box" hidden>
       <div class="modal-head">
         <div>
-          <span class="eyebrow" id="update-tag">VERSIÓN 3.0.0</span>
-          <h2>BENTO GAME</h2>
+          <span class="eyebrow">EXPEDIENTE LOCAL</span>
+          <h2>PERFIL Y RÉCORDS</h2>
         </div>
+        <button id="close-profile" class="close-board" type="button">×</button>
       </div>
-      <div class="update-body">
-        <ul id="update-list">
-          <li><strong>Rediseño Bentokit:</strong> Interfaz limpia de alto contraste en papel claro y tinta negra.</li>
-          <li><strong>Nuevo Modo Secuencia:</strong> Juego de precisión rítmica por niveles y dificultad.</li>
-          <li><strong>Modo Evolución:</strong> Multiplicadores x1.5 y x2, 3 carriles y formas geométricas.</li>
-          <li><strong>Enfoque Minimalista:</strong> Eliminado el modo abierto para centrarse en reflejos puros.</li>
-        </ul>
-      </div>
-      <label class="modal-check">
-        <input type="checkbox" id="dont-show-check">
-        <span>No volver a mostrar esta versión</span>
-      </label>
-      <button id="close-update" class="primary-btn update-close-btn" type="button">CONTINUAR</button>
-    </section>
 
-    <!-- Historial de Intentos -->
-    <section id="board" class="board" aria-label="Tabla de intentos" hidden>
-      <div class="board-head">
-        <div>
-          <span class="eyebrow">REGISTRO LOCAL</span>
-          <h2>HISTORIAL</h2>
-        </div>
-        <button id="close-board" class="close-board" type="button" aria-label="Cerrar">×</button>
-      </div>
+      <div class="stats-grid" id="stats-grid"></div>
 
       <div class="board-filter-group" id="board-filters">
         <button type="button" class="filter-btn active" data-filter="all">TODOS</button>
         <button type="button" class="filter-btn" data-filter="classic">ÓRBITA</button>
         <button type="button" class="filter-btn" data-filter="evolution">EVOLUCIÓN</button>
         <button type="button" class="filter-btn" data-filter="sequence">SECUENCIA</button>
+        <button type="button" class="filter-btn" data-filter="vector">VECTOR</button>
+        <button type="button" class="filter-btn" data-filter="matrix">MATRIZ</button>
+        <button type="button" class="filter-btn" data-filter="stack">EQUILIBRIO</button>
       </div>
 
       <div class="board-columns">
@@ -199,7 +243,38 @@
         <span>TIEMPO</span>
       </div>
       <ol id="run-list" class="run-list"></ol>
-      <p id="empty-board" class="empty-board">Aún no hay partidas registradas.</p>
+      <p id="empty-board" class="empty-board">Sin partidas registradas.</p>
+
+      <div class="backup-box">
+        <span class="eyebrow">COPIA DE SEGURIDAD OFFLINE</span>
+        <div class="backup-btns">
+          <button type="button" id="export-btn" class="board-trigger">COPIAR CÓDIGO</button>
+          <button type="button" id="import-btn" class="board-trigger">RESTAURAR</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Modal de Actualizaciones -->
+    <section id="update-modal" class="modal-box" hidden>
+      <div class="modal-head">
+        <div>
+          <span class="eyebrow" id="update-tag">VERSIÓN 4.0.0</span>
+          <h2>BENTO MACROAPP</h2>
+        </div>
+      </div>
+      <div class="update-body">
+        <ul id="update-list">
+          <li><strong>6 Cartuchos Jugables:</strong> Añadidos Vector, Matriz y Equilibrio.</li>
+          <li><strong>Modo Duelo 1v1:</strong> Pantalla dividida para 2 jugadores en el mismo móvil.</li>
+          <li><strong>Rango de Operador y Misiones:</strong> Sube de nivel y reclama recompensas.</li>
+          <li><strong>Copia de Seguridad:</strong> Exporta e importa tu progreso sin cuentas.</li>
+        </ul>
+      </div>
+      <label class="modal-check">
+        <input type="checkbox" id="dont-show-check">
+        <span>No volver a mostrar esta versión</span>
+      </label>
+      <button id="close-update" class="primary-btn update-close-btn" type="button">ENTRAR AL HUB</button>
     </section>
 
     <footer class="bottom-ui">
@@ -212,7 +287,7 @@
     <div id="reverse-banner" class="alert-banner">INVERSIÓN</div>
   </main>
 
-  <script src="game.js?v=3.0.0"></script>
+  <script type="module" src="./js/engine.js?v=4.0.0"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
