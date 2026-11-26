@@ -8,8 +8,8 @@
   "theme_color": "#f4f4f1",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%23f4f4f1'/><rect x='96' y='96' width='144' height='144' fill='none' stroke='%23141414' stroke-width='24'/><rect x='272' y='96' width='144' height='144' fill='%23141414'/><rect x='96' y='272' width='144' height='144' fill='none' stroke='%23141414' stroke-width='24'/><rect x='272' y='272' width='144' height='144' fill='%23d9381e'/></svg>",
-      "sizes": "512x512",
+      "src": "./icon.svg",
+      "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
